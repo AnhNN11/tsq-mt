@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { validateAccount } from "../lib/account-validation";
+import {
+  accountEmail,
+  accountUsername,
+  ACCOUNT_EMAIL_PATTERN,
+} from "../lib/account-identity";
 import { assertValidChanges, validBirthDate } from "../lib/validation";
 import {
   genderOf,
@@ -18,6 +23,32 @@ const account = {
   active: true,
   password: "TestOnly_2026!",
 };
+test("school email identities keep stable account IDs and accept eight-character passwords", () => {
+  assert.equal(accountEmail("Teacher.Test"), "teacher.test@ph1.tsqmt.edu.vn");
+  assert.equal(
+    accountUsername(" Teacher.Test@ph1.tsqmt.edu.vn "),
+    "teacher.test",
+  );
+  assert.equal(
+    ACCOUNT_EMAIL_PATTERN.test("teacher.test@ph1.tsqmt.edu.vn"),
+    true,
+  );
+  assert.equal(ACCOUNT_EMAIL_PATTERN.test("teacher.test"), false);
+  assert.throws(() => accountUsername("teacher.test@example.com"));
+  const value = validateAccount(
+    {
+      ...account,
+      username: accountEmail(account.username),
+      password: "Test26!a",
+    },
+    true,
+  );
+  assert.equal(value.username, account.username);
+  assert.equal(value.password?.length, 8);
+  assert.throws(() =>
+    validateAccount({ ...account, password: "Test26!" }, true),
+  );
+});
 test("accounts reject invalid usernames, weak passwords, missing subjects and unknown roles", () => {
   assert.equal(validateAccount(account, true).username, account.username);
   for (const update of [

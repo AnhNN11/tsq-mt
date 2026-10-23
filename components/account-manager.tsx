@@ -12,7 +12,7 @@ import {
   Space,
   Switch,
   Table,
-  Tag,
+  Badge,
 } from "antd";
 import {
   DeleteOutlined,
@@ -24,7 +24,9 @@ import { roleLabel, type AppUser } from "@/lib/access";
 import { validateAccount, type AccountInput } from "@/lib/account-validation";
 import { normalize, SUBJECTS } from "@/lib/model";
 import { useUser } from "./auth-context";
-type Account = AppUser & { active: boolean };
+import StatusBadge, { RoleBadge } from "./status-badge";
+import { ACCOUNT_EMAIL_PATTERN, accountEmail } from "@/lib/account-identity";
+type Account = AppUser & { active: boolean; email: string };
 export default function AccountManager() {
   const user = useUser();
   const { message } = App.useApp();
@@ -85,6 +87,9 @@ export default function AccountManager() {
   }
   return (
     <>
+      <h2 className="account-section-heading">
+        Quản lý tài khoản và phân quyền
+      </h2>
       <p className="section-description">
         Admin quản lý toàn bộ; phó khoa quản lý cả hai môn; giáo viên đánh giá
         môn được giao. Ngừng sử dụng tài khoản giữ lại lịch sử đánh giá và có
@@ -130,7 +135,7 @@ export default function AccountManager() {
         size="small"
         loading={loading}
         dataSource={users.filter((u) =>
-          normalize(`${u.name} ${u.username}`).includes(normalize(query)),
+          normalize(`${u.name} ${u.email}`).includes(normalize(query)),
         )}
         pagination={{ pageSize: 12, showTotal: (n) => `${n} tài khoản` }}
         scroll={{ x: 880 }}
@@ -140,7 +145,7 @@ export default function AccountManager() {
             dataIndex: "name",
             render: (name) => <strong>{name}</strong>,
           },
-          { title: "TÀI KHOẢN", dataIndex: "username" },
+          { title: "EMAIL ĐĂNG NHẬP", dataIndex: "email" },
           {
             title: "VAI TRÒ",
             dataIndex: "role",
@@ -149,24 +154,25 @@ export default function AccountManager() {
               value: role,
             })),
             onFilter: (value, row) => row.role === value,
-            render: (role: AppUser["role"]) => (
-              <Tag
-                color={
-                  role === "admin"
-                    ? "red"
-                    : role === "manager"
-                      ? "gold"
-                      : "green"
-                }
-              >
-                {roleLabel(role)}
-              </Tag>
-            ),
+            render: (role: AppUser["role"]) => <RoleBadge role={role} />,
           },
           {
             title: "MÔN PHỤ TRÁCH",
-            render: (_, u) =>
-              u.role === "teacher" ? u.subjects.join(", ") : "Cả hai môn",
+            render: (_, u) => (
+              <Space size={[4, 4]} wrap>
+                {(u.role === "teacher" ? u.subjects : SUBJECTS).map(
+                  (subject) => (
+                    <StatusBadge
+                      key={subject}
+                      tone={subject === "Tin học" ? "green" : "blue"}
+                      variant="outline"
+                    >
+                      {subject}
+                    </StatusBadge>
+                  ),
+                )}
+              </Space>
+            ),
           },
           {
             title: "TRẠNG THÁI",
@@ -177,9 +183,10 @@ export default function AccountManager() {
             ],
             onFilter: (value, row) => row.active === value,
             render: (active) => (
-              <Tag color={active ? "green" : "default"}>
-                {active ? "Hoạt động" : "Ngừng sử dụng"}
-              </Tag>
+              <Badge
+                status={active ? "success" : "default"}
+                text={active ? "Hoạt động" : "Ngừng sử dụng"}
+              />
             ),
           },
           {
@@ -254,7 +261,10 @@ function AccountEditor({
       <Form
         form={form}
         layout="vertical"
-        initialValues={account}
+        initialValues={{
+          ...account,
+          username: account.username ? accountEmail(account.username) : "",
+        }}
         onFinish={onSave}
       >
         <Form.Item
@@ -273,15 +283,16 @@ function AccountEditor({
           rules={[
             { required: true },
             {
-              pattern: /^[a-z][a-z0-9._-]{2,49}$/,
-              message:
-                "3–50 ký tự không dấu, bắt đầu bằng chữ; chỉ gồm chữ, số, dấu . _ -",
+              pattern: ACCOUNT_EMAIL_PATTERN,
+              message: "Nhập email theo dạng ten@ph1.tsqmt.edu.vn",
             },
           ]}
         >
           <Input
             disabled={Boolean(account.username)}
-            maxLength={50}
+            maxLength={100}
+            placeholder="ten@ph1.tsqmt.edu.vn"
+            type="email"
             autoComplete="off"
           />
         </Form.Item>
@@ -291,7 +302,7 @@ function AccountEditor({
             label="Mật khẩu ban đầu"
             rules={[
               { required: true },
-              { min: 12, max: 128, message: "Cần 12–128 ký tự." },
+              { min: 8, max: 128, message: "Cần 8–128 ký tự." },
               {
                 pattern: /^(?=.*[A-Za-z])(?=.*\d)/,
                 message: "Mật khẩu cần có chữ và số.",

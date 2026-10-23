@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/utils/supabase/server";
 import type { AppUser } from "./access";
+import { ACCOUNT_EMAIL_PATTERN } from "./account-identity";
 
 export async function currentUser(): Promise<AppUser | null> {
   const supabase = await createClient();
@@ -10,7 +11,7 @@ export async function currentUser(): Promise<AppUser | null> {
   } = await supabase.auth.getUser();
   if (error || !user) return null;
   const { data: profile } = await supabase
-    .from("school_profiles")
+    .from("school_accounts")
     .select("username,name,role,subjects,active")
     .eq("id", user.id)
     .eq("active", true)
@@ -24,9 +25,11 @@ export async function currentUser(): Promise<AppUser | null> {
   };
 }
 export async function authenticate(username: string, password: string) {
+  if (!ACCOUNT_EMAIL_PATTERN.test(username))
+    return { error: "Nhập tài khoản dạng ten@ph1.tsqmt.edu.vn.", status: 401 };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
-    email: `${username}@mamxanh.school`,
+    email: username.trim().toLowerCase(),
     password,
   });
   if (error)

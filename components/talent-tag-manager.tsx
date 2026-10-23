@@ -10,13 +10,13 @@ import {
   Select,
   Space,
   Table,
-  Tag,
 } from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { TALENT_CATEGORIES, normalize, type TalentTag } from "@/lib/model";
 import { saveWorkspace, useWorkspace } from "@/lib/store";
 import { canManage } from "@/lib/access";
 import { useUser } from "./auth-context";
+import { TalentBadge } from "./status-badge";
 
 export default function TalentTagManager({
   open,
@@ -131,7 +131,7 @@ export default function TalentTagManager({
               {
                 title: "Thẻ",
                 dataIndex: "name",
-                render: (_, t) => <Tag color={t.color}>{t.name}</Tag>,
+                render: (_, t) => <TalentBadge tag={t} />,
               },
               { title: "Lĩnh vực", dataIndex: "category" },
               {

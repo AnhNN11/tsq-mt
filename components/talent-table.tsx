@@ -10,7 +10,6 @@ import {
   Select,
   Space,
   Table,
-  Tag,
 } from "antd";
 import {
   DeleteOutlined,
@@ -30,6 +29,7 @@ import { saveWorkspace } from "@/lib/store";
 import { canManage } from "@/lib/access";
 import { useUser } from "./auth-context";
 import TalentTagManager from "./talent-tag-manager";
+import StatusBadge, { TalentBadge } from "./status-badge";
 
 type Row = { student: Student; talent?: TalentAssessment; key: string };
 export default function TalentTable({
@@ -243,20 +243,22 @@ export default function TalentTable({
                 maxTagCount="responsive"
                 options={tags.map((t) => ({ value: t.id, label: t.name }))}
                 onChange={(ids) => void assignTags(r.student, ids)}
-                tagRender={({ value, label, closable, onClose }) => (
-                  <Tag
-                    color={tags.find((t) => t.id === value)?.color}
-                    closable={closable}
-                    onClose={onClose}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    style={{ margin: 2 }}
-                  >
-                    {label}
-                  </Tag>
-                )}
+                tagRender={({ value, label, closable, onClose }) => {
+                  const tag = tags.find((t) => t.id === value);
+                  return tag ? (
+                    <TalentBadge
+                      tag={tag}
+                      closable={closable}
+                      onClose={onClose}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    />
+                  ) : (
+                    <span>{label}</span>
+                  );
+                }}
               />
             ),
           },
@@ -278,9 +280,17 @@ export default function TalentTable({
             width: 150,
             render: (_, r) =>
               r.talent ? (
-                <Tag color={r.talent.level === "Nổi trội" ? "green" : "gold"}>
+                <StatusBadge
+                  tone={
+                    r.talent.level === "Nổi trội"
+                      ? "green"
+                      : r.talent.level === "Đang bồi dưỡng"
+                        ? "blue"
+                        : "gold"
+                  }
+                >
                   {r.talent.level}
-                </Tag>
+                </StatusBadge>
               ) : (
                 "—"
               ),

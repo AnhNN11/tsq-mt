@@ -87,13 +87,13 @@ type View =
   | "reports"
   | "settings";
 const labels: Record<View, string> = {
-  overview: "Tổng quan",
-  students: "Lớp & học sinh",
+  overview: "Tổng quan quản lý",
+  students: "Quản lý lớp và học sinh",
   assessments: "Quản lý học lực",
   talents: "Quản lý năng khiếu",
-  lessons: "Giảng dạy",
-  reports: "Báo cáo",
-  settings: "Hệ thống",
+  lessons: "Quản lý giảng dạy",
+  reports: "Báo cáo và thống kê",
+  settings: "Quản trị hệ thống",
 };
 export default function WorkspaceDashboard() {
   const router = useRouter();
@@ -310,7 +310,10 @@ export default function WorkspaceDashboard() {
         </nav>
         <div className="sidebar-bottom">
           <div className="teacher-profile">
-            <Avatar style={{ background: "#e6eddf", color: "#315b35" }}>
+            <Avatar
+              shape="square"
+              style={{ background: "#e6eddf", color: "#315b35" }}
+            >
               {user.name
                 .split(" ")
                 .slice(-2)
@@ -531,24 +534,28 @@ export default function WorkspaceDashboard() {
                     {[
                       {
                         label: "Học sinh",
+                        tone: "green",
                         value: students.length,
                         detail: `${students.filter((s) => genderOf(s) === "Nam").length} nam · ${students.filter((s) => genderOf(s) === "Nữ").length} nữ · ${students.filter((s) => genderOf(s) === "Chưa cập nhật").length} chưa cập nhật`,
                         icon: <TeamOutlined aria-hidden />,
                       },
                       {
                         label: "Giảng dạy",
+                        tone: "blue",
                         value: stats.periods,
                         detail: `${stats.topics} bài · ${lessons.length} lượt dạy`,
                         icon: <BookOutlined aria-hidden />,
                       },
                       {
                         label: "Đã đánh giá học lực",
+                        tone: "gold",
                         value: `${assessed}/${students.length}`,
                         detail: `Môn ${subject}`,
                         icon: <CheckCircleOutlined aria-hidden />,
                       },
                       {
                         label: "Đã ghi nhận năng khiếu",
+                        tone: "red",
                         value: students.filter(
                           (s) => s.talents?.length || s.talentTagIds?.length,
                         ).length,
@@ -556,7 +563,11 @@ export default function WorkspaceDashboard() {
                         icon: <StarOutlined aria-hidden />,
                       },
                     ].map((stat) => (
-                      <div className="stat-card" key={stat.label}>
+                      <div
+                        className="stat-card"
+                        data-tone={stat.tone}
+                        key={stat.label}
+                      >
                         <span className="stat-icon">{stat.icon}</span>
                         <div className="stat-top">{stat.label}</div>
                         <div className="stat-value">{stat.value}</div>
@@ -728,6 +739,7 @@ export default function WorkspaceDashboard() {
                                 }
                               >
                                 <Avatar
+                                  shape="square"
                                   size={32}
                                   style={{
                                     background: "#edf2e7",

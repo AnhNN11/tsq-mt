@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Alert, Button, Form, Input } from "antd";
 import { LockOutlined, LoginOutlined, UserOutlined } from "@ant-design/icons";
+import { ACCOUNT_EMAIL_PATTERN } from "@/lib/account-identity";
 export default function LoginForm() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -44,9 +45,9 @@ export default function LoginForm() {
         <div>
           <span className="login-eyebrow">KHOA TIN HỌC VÀ NGOẠI NGỮ</span>
           <h1>
-            Đồng hành cùng
+            Quản lý học sinh
             <br />
-            từng bước tiến.
+            Khoa Tin học và Ngoại ngữ
           </h1>
           <p>
             Quản lý học sinh, theo dõi học lực và phát triển năng khiếu trong
@@ -60,19 +61,26 @@ export default function LoginForm() {
       <section className="login-form-panel">
         <div className="login-form-inner">
           <span className="eyebrow">KHÔNG GIAN GIÁO VIÊN</span>
-          <h2>Đăng nhập</h2>
-          <p>Sử dụng tài khoản được khoa cấp để bắt đầu.</p>
+          <h2>Đăng nhập hệ thống</h2>
+          <p>Sử dụng tài khoản email @ph1.tsqmt.edu.vn được khoa cấp.</p>
           {error && <Alert type="error" showIcon title={error} />}
           <Form layout="vertical" onFinish={login} autoComplete="on">
             <Form.Item
               name="username"
               label="Tài khoản"
-              rules={[{ required: true, message: "Nhập tài khoản của bạn." }]}
+              rules={[
+                { required: true, message: "Nhập email tài khoản của bạn." },
+                {
+                  pattern: ACCOUNT_EMAIL_PATTERN,
+                  message: "Tài khoản phải có đuôi @ph1.tsqmt.edu.vn.",
+                },
+              ]}
             >
               <Input
                 prefix={<UserOutlined aria-hidden />}
                 autoComplete="username"
-                placeholder="Tên đăng nhập"
+                placeholder="ten@ph1.tsqmt.edu.vn"
+                type="email"
                 maxLength={100}
                 size="large"
               />

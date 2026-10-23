@@ -9,19 +9,26 @@ import readExcel from "read-excel-file/node";
 import JSZip from "jszip";
 import { newStudent } from "../../lib/model";
 
-type Account = {
-  username: string;
-  password: string;
-  role: string;
-  subjects: string[];
-};
-const users: Account[] = JSON.parse(process.env.APP_USERS_JSON || "[]");
-const admin = users.find((u) => u.role === "admin")!;
-const teacher = users.find((u) => u.username === "nhatanh.nguyen")!;
-const manager = users.find((u) => u.role === "manager")!;
+import { accountEmail } from "../../lib/account-identity";
+import {
+  loadStaffAccounts,
+  type StaffAccount as Account,
+} from "./staff-accounts";
+let admin: Account;
+let teacher: Account;
+let manager: Account;
+test.beforeAll(async () => {
+  const accounts = await loadStaffAccounts();
+  admin = accounts.find((u) => u.role === "admin")!;
+  teacher = accounts.find((u) => u.username === "nhatanh.nguyen")!;
+  manager = accounts.find((u) => u.role === "manager")!;
+});
 async function login(request: APIRequestContext, account = admin) {
   const response = await request.post("/api/auth/login", {
-    data: { username: account.username, password: account.password },
+    data: {
+      username: accountEmail(account.username),
+      password: account.password,
+    },
   });
   expect(response.status()).toBe(200);
 }
@@ -84,14 +91,18 @@ test("anonymous access is blocked and login uses an HttpOnly Supabase session", 
   expect((await request.get("/api/accounts")).status()).toBe(401);
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);
-  await page.getByLabel("Tài khoản", { exact: true }).fill(admin.username);
+  await page
+    .getByLabel("Tài khoản", { exact: true })
+    .fill(accountEmail(admin.username));
   await page.getByLabel("Mật khẩu", { exact: true }).fill("wrong-password");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page.locator(".ant-alert")).toContainText("không đúng");
   await page.getByLabel("Mật khẩu", { exact: true }).fill(admin.password);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL("/");
-  await expect(page.getByRole("heading", { name: "Tổng quan." })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Tổng quan quản lý." }),
+  ).toBeVisible();
   await expect(page.locator(".page-heading p")).toContainText("160 hồ sơ");
   const cookies = await page.context().cookies();
   expect(
@@ -200,7 +211,7 @@ test("teacher permissions are enforced by both API and Supabase RPC", async ({
   expect(
     (
       await client.auth.signInWithPassword({
-        email: `${teacher.username}@mamxanh.school`,
+        email: accountEmail(teacher.username),
         password: teacher.password,
       })
     ).error,
@@ -331,7 +342,9 @@ test("Word and Excel reports contain charts and respect class/ethnicity filters"
   await page.goto("/");
   await choose(page, "Lớp học", "Lớp 10/1");
   await choose(page, "Lọc dân tộc", "Kinh (7)");
-  await page.getByRole("button", { name: "Báo cáo", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Báo cáo và thống kê", exact: true })
+    .click();
   await expect(page.locator(".report-title")).toContainText("Dân tộc Kinh");
   await expect(
     page.locator(".report-charts .recharts-wrapper > svg.recharts-surface"),
@@ -421,10 +434,10 @@ test("mobile layout has no overflow and teacher sees only assigned subject", asy
   ).toBeVisible();
   await page.getByRole("button", { name: "Mở menu", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Hệ thống", exact: true }),
+    page.getByRole("button", { name: "Quản trị hệ thống", exact: true }),
   ).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Lớp & học sinh", exact: true })
+    .getByRole("button", { name: "Quản lý lớp và học sinh", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Thêm học sinh", exact: true }),
@@ -449,7 +462,9 @@ test("class, pupil and lesson editors validate and persist full CRUD", async ({
   await login(page.request);
   await page.goto("/");
   await choose(page, "Lớp học", `Lớp ${scratchName}`);
-  await page.getByRole("button", { name: "Giảng dạy", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Quản lý giảng dạy", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Ghi nhận tiết dạy", exact: true })
     .click();
@@ -474,7 +489,7 @@ test("class, pupil and lesson editors validate and persist full CRUD", async ({
     page.getByRole("button", { name: "Sửa bài E2E Bài thử", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Lớp & học sinh", exact: true })
+    .getByRole("button", { name: "Quản lý lớp và học sinh", exact: true })
     .click();
   await page
     .getByRole("button", { name: `Sửa lớp ${scratchName}`, exact: true })
@@ -535,14 +550,16 @@ test("class, pupil and lesson editors validate and persist full CRUD", async ({
       exact: true,
     }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Giảng dạy", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Quản lý giảng dạy", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Xóa bài E2E Bài thử", exact: true })
     .click();
   await page.getByRole("button", { name: "Xóa", exact: true }).click();
   await expect(page.getByText("Đã xóa lượt dạy.")).toBeVisible();
   await page
-    .getByRole("button", { name: "Lớp & học sinh", exact: true })
+    .getByRole("button", { name: "Quản lý lớp và học sinh", exact: true })
     .click();
   await page.getByRole("tab", { name: /Lớp học/ }).click();
   await page.getByRole("button", { name: "Xóa lớp 9/98", exact: true }).click();

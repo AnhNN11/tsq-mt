@@ -2,6 +2,7 @@ import { currentUser, sameOrigin } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { validateAccount } from "@/lib/account-validation";
+import { accountEmail } from "@/lib/account-identity";
 export async function GET() {
   const user = await currentUser();
   if (user?.role !== "admin")
@@ -11,8 +12,8 @@ export async function GET() {
     );
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("school_profiles")
-    .select("username,name,role,subjects,active")
+    .from("school_accounts")
+    .select("username,email,name,role,subjects,active,created_at,updated_at")
     .order("name");
   if (error)
     return Response.json(
@@ -80,7 +81,7 @@ async function mutate(request: Request, method: "POST" | "PATCH" | "DELETE") {
       );
     const client = createAdminClient();
     const existing = await client
-      .from("school_profiles")
+      .from("school_accounts")
       .select("id,username")
       .eq("username", values.username)
       .maybeSingle();
@@ -92,7 +93,7 @@ async function mutate(request: Request, method: "POST" | "PATCH" | "DELETE") {
           { status: 409 },
         );
       const result = await client.auth.admin.createUser({
-        email: `${values.username}@mamxanh.school`,
+        email: accountEmail(values.username),
         password: values.password,
         email_confirm: true,
         app_metadata: { school: "mam-xanh" },
@@ -108,7 +109,7 @@ async function mutate(request: Request, method: "POST" | "PATCH" | "DELETE") {
       const { password: omitted, ...profile } = values;
       void omitted;
       const saved = await client
-        .from("school_profiles")
+        .from("school_accounts")
         .insert({ id: result.data.user.id, ...profile });
       if (saved.error) {
         await client.auth.admin.deleteUser(result.data.user.id);
@@ -121,7 +122,7 @@ async function mutate(request: Request, method: "POST" | "PATCH" | "DELETE") {
           { status: 404 },
         );
       const updated = await client
-        .from("school_profiles")
+        .from("school_accounts")
         .update(
           method === "DELETE"
             ? { active: false }

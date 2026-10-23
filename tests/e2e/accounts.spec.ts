@@ -1,13 +1,25 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
-const users = JSON.parse(process.env.APP_USERS_JSON || "[]");
-const admin = users.find((u: { role: string }) => u.role === "admin");
-const teacher = users.find((u: { role: string }) => u.role === "teacher");
+import { accountEmail } from "../../lib/account-identity";
+import { loadStaffAccounts, type StaffAccount } from "./staff-accounts";
+let admin: StaffAccount;
+let teacher: StaffAccount;
+test.beforeAll(async () => {
+  const accounts = await loadStaffAccounts();
+  admin = accounts.find((u) => u.role === "admin")!;
+  teacher = accounts.find((u) => u.role === "teacher")!;
+});
 const username = "e2e.account.temporary";
 const password = `TestOnly!26-${crypto.randomUUID()}`;
-async function login(request: APIRequestContext, account = admin) {
+async function login(
+  request: APIRequestContext,
+  account: { username: string; password: string } = admin,
+) {
   return request.post("/api/auth/login", {
-    data: { username: account.username, password: account.password },
+    data: {
+      username: accountEmail(account.username),
+      password: account.password,
+    },
   });
 }
 test.afterAll(async () => {
@@ -18,7 +30,7 @@ test.afterAll(async () => {
     auth: { persistSession: false },
   });
   const { data } = await service
-    .from("school_profiles")
+    .from("school_accounts")
     .select("id,name")
     .eq("username", username)
     .maybeSingle();
@@ -62,14 +74,18 @@ test("admin account CRUD validates input, changes live roles, disables and react
   ).toBe(400);
   await login(page.request);
   await page.goto("/");
-  await page.getByRole("button", { name: "Hệ thống", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Quản trị hệ thống", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Tạo tài khoản", exact: true })
     .click();
   await page
     .getByLabel("Họ và tên giáo viên", { exact: true })
     .fill(input.name);
-  await page.getByLabel("Tên tài khoản", { exact: true }).fill(username);
+  await page
+    .getByLabel("Tên tài khoản", { exact: true })
+    .fill(accountEmail(username));
   await page.getByLabel("Mật khẩu ban đầu", { exact: true }).fill(password);
   await page
     .getByRole("combobox", { name: "Vai trò tài khoản", exact: true })
