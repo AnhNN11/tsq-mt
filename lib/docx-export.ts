@@ -1,4 +1,5 @@
 import { assessmentOf, talentTagNames } from "./model";
+import { academicLabel } from "./academic-tags";
 import { downloadBlob, reportSummary, type ReportData } from "./report-data";
 
 export async function exportDocx(
@@ -118,7 +119,7 @@ export async function exportDocx(
       [2016, 2016, 2016, 2016, 2016],
     ),
     p(
-      `Đã đánh giá học lực ${sum.assessed}/${sum.students} học sinh môn ${data.subject}; ${sum.students - sum.assessed} em chưa có đánh giá hiện tại. Có ${sum.talents} học sinh được ghi nhận năng khiếu. Không tự quy đổi các mã KQGD nguồn thành học lực hiện tại.`,
+      `Đã đánh giá học lực ${sum.assessed}/${sum.students} học sinh môn ${data.subject}; ${sum.students - sum.assessed} em chưa có đánh giá hiện tại. Có ${sum.talents} học sinh được ghi nhận năng khiếu. Không tự quy đổi các mã kết quả giáo dục nguồn thành học lực hiện tại.`,
     ),
   ];
   if (data.chartImages?.[0]) {
@@ -255,7 +256,7 @@ export async function exportDocx(
           return [
             s.name + "\nLớp " + s.className,
             `Gia đình: ${s.family || "Chưa cập nhật"}\nTính cách: ${s.personality || "Chưa cập nhật"}`,
-            `Đầu vào: ${a.before || "Chưa có"}\nHiện tại: ${a.after || "Chưa đánh giá"}\nTương tác: ${a.interaction || "Chưa cập nhật"}`,
+            `Đầu vào: ${academicLabel(a.before, data.academicTags) || "Chưa có"}\nHiện tại: ${academicLabel(a.after, data.academicTags) || "Chưa đánh giá"}\nTương tác: ${a.interaction || "Chưa cập nhật"}`,
             a.note || "Chưa có nhận xét",
           ];
         }),

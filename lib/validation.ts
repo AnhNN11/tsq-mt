@@ -1,4 +1,5 @@
 import { genderOf, studentKey, type Workspace } from "./model";
+import { academicTagUsage } from "./academic-tags";
 export function validBirthDate(value: string) {
   if (!value.trim()) return true;
   const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value.trim());
@@ -14,6 +15,15 @@ export function validBirthDate(value: string) {
   );
 }
 export function assertValidChanges(current: Workspace, next: Workspace) {
+  for (const tag of current.academicTags) {
+    if (
+      !next.academicTags.some((t) => t.id === tag.id) &&
+      academicTagUsage(current, tag)
+    )
+      throw new Error(
+        `Thẻ ${tag.name} đang được sử dụng. Hãy đổi thẻ cho học sinh trước khi xóa.`,
+      );
+  }
   const names = new Set<string>();
   for (const student of next.students) {
     const old = current.students.find((s) => s.id === student.id);

@@ -26,17 +26,22 @@ export function assertCanUpdate(
   if (user.role === "admin") return;
   if (!same(current.settings, next.settings)) denied();
   if (user.role === "manager") return;
-  for (const tag of current.talentTags) {
-    const nextTag = next.talentTags.find((t) => t.id === tag.id);
-    if (tag.createdBy !== user.username && !same(tag, nextTag)) denied();
-    if (nextTag && nextTag.createdBy !== tag.createdBy) denied();
-  }
-  for (const tag of next.talentTags) {
-    if (
-      !current.talentTags.some((t) => t.id === tag.id) &&
-      tag.createdBy !== user.username
-    )
-      denied();
+  for (const [previousTags, nextTags] of [
+    [current.talentTags, next.talentTags],
+    [current.academicTags, next.academicTags],
+  ] as const) {
+    for (const tag of previousTags) {
+      const nextTag = nextTags.find((t) => t.id === tag.id);
+      if (tag.createdBy !== user.username && !same(tag, nextTag)) denied();
+      if (nextTag && nextTag.createdBy !== tag.createdBy) denied();
+    }
+    for (const tag of nextTags) {
+      if (
+        !previousTags.some((t) => t.id === tag.id) &&
+        tag.createdBy !== user.username
+      )
+        denied();
+    }
   }
   if (
     !same(current.classes, next.classes) ||

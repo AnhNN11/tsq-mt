@@ -5,6 +5,7 @@ import {
   App,
   Button,
   Col,
+  ConfigProvider,
   Drawer,
   Form,
   Input,
@@ -22,9 +23,7 @@ import {
 } from "@ant-design/icons";
 import {
   assessmentOf,
-  entryLevelOptions,
   INTERACTIONS,
-  LEVELS,
   normalizeClass,
   genderOf,
   studentKey,
@@ -36,6 +35,8 @@ import { useWorkspace } from "@/lib/store";
 import { validBirthDate } from "@/lib/validation";
 import { useUser } from "./auth-context";
 import { canManage } from "@/lib/access";
+import AcademicLevelSelect from "./academic-level-select";
+import { applyStudentEdit } from "@/lib/student-update";
 
 type StudentForm = Omit<Student, "assessments"> & { assessment: Assessment };
 const options = (items: string[]) =>
@@ -110,13 +111,7 @@ export default function StudentEditor({
             ? [...current.students, next]
             : current.students.map((s) =>
                 s.id === student.id
-                  ? {
-                      ...next,
-                      assessments: {
-                        ...s.assessments,
-                        [subject]: next.assessments[subject],
-                      },
-                    }
+                  ? applyStudentEdit(s, next, subject, manage)
                   : s,
               ),
         };
@@ -190,7 +185,13 @@ export default function StudentEditor({
               ),
               forceRender: true,
               children: (
-                <>
+                <ConfigProvider componentDisabled={!manage}>
+                  {!manage && (
+                    <p className="editor-note">
+                      Thông tin hồ sơ do quản trị viên hoặc phó khoa cập nhật.
+                      Giáo viên chỉnh sửa tại phần đánh giá môn học.
+                    </p>
+                  )}
                   <Row gutter={16}>
                     <Col span={16}>
                       <Form.Item
@@ -318,7 +319,7 @@ export default function StudentEditor({
                   <Form.Item name="notes" label="Ghi chú chung">
                     <Input.TextArea rows={2} maxLength={5000} />
                   </Form.Item>
-                </>
+                </ConfigProvider>
               ),
             },
             {
@@ -330,7 +331,7 @@ export default function StudentEditor({
               ),
               forceRender: true,
               children: (
-                <>
+                <ConfigProvider componentDisabled={!manage}>
                   <Form.Item
                     name="parents"
                     label="Phụ huynh và thông tin liên hệ"
@@ -361,7 +362,7 @@ export default function StudentEditor({
                   >
                     <Input.TextArea rows={3} maxLength={5000} />
                   </Form.Item>
-                </>
+                </ConfigProvider>
               ),
             },
             {
@@ -381,21 +382,21 @@ export default function StudentEditor({
                   <Form.Item
                     name={["assessment", "before"]}
                     label="Trình độ trước khi vào trường"
-                    extra="Điền sẵn từ KQGD trong trích ngang; có thể điều chỉnh cho môn đang chọn."
+                    extra="Điền sẵn từ kết quả giáo dục trong trích ngang; có thể điều chỉnh cho môn đang chọn."
                   >
-                    <Select
+                    <AcademicLevelSelect
+                      stage="before"
                       placeholder="Chọn mức đánh giá đầu vào"
-                      options={entryLevelOptions(student)}
                     />
                   </Form.Item>
                   <Form.Item
                     name={["assessment", "after"]}
                     label="Trình độ sau khi học tại trường"
                   >
-                    <Select
+                    <AcademicLevelSelect
+                      stage="after"
                       allowClear
                       placeholder="Chọn mức đánh giá hiện tại"
-                      options={options(LEVELS)}
                       onClear={() =>
                         form.setFieldValue(["assessment", "after"], "")
                       }

@@ -4,6 +4,7 @@ import {
   newStudent,
   type Workspace,
 } from "../../lib/model";
+import { DEFAULT_ACADEMIC_TAGS } from "../../lib/academic-tags";
 // Entirely synthetic test fixtures. Production student records live only in Supabase.
 export const INITIAL_DATA: Workspace = {
   version: 1,
@@ -36,4 +37,5 @@ export const INITIAL_DATA: Workspace = {
   })),
   lessons: [],
   talentTags: structuredClone(DEFAULT_TALENT_TAGS),
+  academicTags: structuredClone(DEFAULT_ACADEMIC_TAGS),
 };

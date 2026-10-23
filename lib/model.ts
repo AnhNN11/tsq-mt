@@ -1,3 +1,11 @@
+import {
+  DEFAULT_ACADEMIC_TAGS,
+  validAcademicTags,
+  academicOptions,
+  academicLabel,
+  sourceAcademicLevel,
+  type AcademicTag,
+} from "./academic-tags";
 export const SUBJECTS = ["Tin học", "Tiếng Anh"];
 export const LEVELS = ["Tốt", "Khá", "Đạt", "Cần hỗ trợ"];
 export const INTERACTIONS = [
@@ -122,6 +130,7 @@ export type Workspace = {
   pendingStudents: PendingStudent[];
   lessons: Lesson[];
   talentTags: TalentTag[];
+  academicTags: AcademicTag[];
 };
 export const EMPTY_ASSESSMENT: Assessment = {
   before: "",
@@ -138,6 +147,7 @@ export const EMPTY_WORKSPACE: Workspace = {
   pendingStudents: [],
   lessons: [],
   talentTags: [],
+  academicTags: [],
 };
 export const STUDENT_FIELDS = [
   "id",
@@ -247,34 +257,14 @@ export function assessmentOf(student: Student, subject: string) {
   return { ...current, before: current.before || sourceEntryLevel(student) };
 }
 export function sourceEntryLevel(student: Pick<Student, "priorEducation">) {
-  const first = student.priorEducation.split(/\r?\n/)[0].trim();
-  // Some source cells flatten KQGD and phẩm chất into "HT Tốt" on one line.
-  const separated = first.match(
-    /^(HTSX|HTT|HT|XS|SX|G|Khá|TB|Đạt|Giỏi|Tốt)\s*Tốt$/i,
-  );
-  return (separated?.[1] ?? first).slice(0, 120);
+  return sourceAcademicLevel(student.priorEducation);
 }
 export function entryLevelOptions(student?: Student) {
-  return Array.from(
-    new Set([
-      ...LEVELS,
-      "XS",
-      "SX",
-      "HTT",
-      "HT",
-      "G",
-      "Giỏi",
-      "TB",
-      ...(student
-        ? [
-            sourceEntryLevel(student),
-            ...Object.values(student.assessments).map((a) => a.before),
-          ]
-        : []),
-    ]),
-  )
-    .filter(Boolean)
-    .map((value) => ({ value, label: value }));
+  return academicOptions(
+    DEFAULT_ACADEMIC_TAGS,
+    "before",
+    student ? sourceEntryLevel(student) : "",
+  );
 }
 export function ethnicityOf(student: Pick<Student, "ethnicity">) {
   const raw = student.ethnicity
@@ -416,6 +406,7 @@ export function parseWorkspace(
     migrated = {
       pendingStudents: [],
       talentTags: DEFAULT_TALENT_TAGS,
+      academicTags: DEFAULT_ACADEMIC_TAGS,
       ...migrated,
       sourceVersion: 2,
     };
@@ -503,12 +494,14 @@ export function validateWorkspace(value: unknown): value is Workspace {
     !Array.isArray(value.pendingStudents) ||
     !Array.isArray(value.lessons) ||
     !Array.isArray(value.talentTags) ||
+    !validAcademicTags(value.academicTags) ||
     value.students.length > 10000 ||
     value.pendingStudents.length > 10000 ||
     value.lessons.length > 50000
   )
     return false;
   const tags = value.talentTags;
+  const academicTags = value.academicTags;
   if (
     tags.length > 200 ||
     !tags.every(
@@ -623,7 +616,9 @@ export function validateWorkspace(value: unknown): value is Workspace {
           (k) => typeof a[k] === "string" && a[k].length <= 20000,
         ) &&
         (a.before as string).length <= 120 &&
-        (!a.after || LEVELS.includes(a.after as string)) &&
+        (!a.after ||
+          LEVELS.includes(a.after as string) ||
+          academicTags.some((t) => t.id === a.after && t.stage !== "before")) &&
         (!a.interaction || INTERACTIONS.includes(a.interaction as string)),
     );
   const studentsValid = value.students.every((s) => validStudent(s));
@@ -675,7 +670,11 @@ export function csvContent(rows: unknown[][]) {
   );
 }
 
-export function reportRows(students: Student[], subject: string) {
+export function reportRows(
+  students: Student[],
+  subject: string,
+  academicTags = DEFAULT_ACADEMIC_TAGS,
+) {
   return [
     [
       "Mã học sinh",
@@ -720,8 +719,8 @@ export function reportRows(students: Student[], subject: string) {
         s.strengths,
         s.personality,
         subject,
-        a.before,
-        a.after,
+        academicLabel(a.before, academicTags),
+        academicLabel(a.after, academicTags),
         a.interaction,
         a.note,
         s.notes,

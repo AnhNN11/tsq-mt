@@ -13,7 +13,7 @@
   border: 1px solid color-mix(in srgb, var(--badge-color), white 65%);
   color: var(--badge-color);
   background: color-mix(in srgb, var(--badge-color), white 92%);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 20px;
 }
@@ -599,4 +599,154 @@
   .report-talents .report-table {
     min-width: 0;
   }
+}
+
+/* Readable management tables without increasing decorative spacing. */
+.refined-workspace .list-panel .ant-table-thead > tr > th {
+  font-size: 12px;
+  letter-spacing: 0;
+  color: #344d36;
+  padding: 12px;
+}
+.refined-workspace .list-panel .ant-table-tbody > tr > td {
+  font-size: 14px;
+  padding: 12px;
+}
+.refined-workspace .student-cell strong,
+.evaluation-table-panel .student-cell strong {
+  font-size: 14px;
+}
+.refined-workspace .student-cell small,
+.evaluation-table-panel .student-cell small,
+.table-subline {
+  font-size: 12px;
+  color: #62705f;
+}
+.refined-workspace .panel-heading p,
+.refined-workspace .table-toolbar .ant-select,
+.refined-workspace .table-toolbar .ant-input-affix-wrapper,
+.scope-caption {
+  font-size: 13px;
+}
+.refined-workspace .nav-item {
+  font-size: 14px;
+}
+.refined-workspace .sidebar .brand small {
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  white-space: normal;
+}
+.refined-workspace .page-heading .eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.3px;
+}
+.refined-workspace .stat-top {
+  font-size: 13px;
+  color: #52634f;
+}
+.refined-workspace .stat-detail {
+  font-size: 12px;
+  color: #63715e;
+  line-height: 1.6;
+}
+.chart-heading > span,
+.chart-card > p {
+  font-size: 12px;
+  color: #62705f;
+}
+.evaluation-table-panel .ant-table-tbody .ant-select,
+.evaluation-table-panel .ant-table-tbody .ant-select-selector {
+  font-size: 13px !important;
+}
+.evaluation-table-panel .app-badge {
+  margin: 0;
+  padding: 1px 5px;
+  max-width: 100%;
+}
+.evaluation-table-panel .app-badge > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.data-quality-notice {
+  margin-top: 18px;
+}
+.source-review-collapse {
+  scroll-margin-top: 20px;
+}
+@media (max-width: 700px) {
+  .refined-workspace .main-content {
+    padding: 18px 12px;
+  }
+  .refined-workspace .page-heading p {
+    font-size: 13px;
+  }
+  .refined-workspace .stat-top {
+    font-size: 12px;
+  }
+  .refined-workspace .stat-detail {
+    font-size: 11px;
+  }
+  .refined-workspace .panel-heading {
+    padding: 16px 12px 10px;
+  }
+  .refined-workspace .table-toolbar {
+    padding: 10px 12px;
+  }
+  .data-quality-notice .ant-alert-content {
+    min-width: 0;
+  }
+  .data-quality-notice {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
+
+.refined-workspace .stat-detail {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+@media (max-width: 700px) {
+  .refined-workspace .scope-row > .ant-space {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    width: 100%;
+  }
+  .refined-workspace .scope-row > .ant-space > .ant-space-item {
+    min-width: 0;
+    width: 100%;
+  }
+  .refined-workspace .scope-row > .ant-space > .ant-space-item:last-child {
+    grid-column: 1 / -1;
+  }
+  .refined-workspace .scope-row .ant-select {
+    width: 100%;
+  }
+  .data-quality-notice .ant-alert-actions {
+    flex-basis: 100%;
+    margin-inline-start: 36px;
+  }
+}
+
+.login-brand small {
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.3px;
+}
+.login-eyebrow {
+  font-size: 12px;
+}
+.login-form-inner > small {
+  font-size: 12px;
+  color: #63715e;
+}
+.login-form-inner .ant-form-item-label > label {
+  font-size: 14px;
+}
+.refined-workspace .teacher-profile strong {
+  font-size: 13px;
+}
+.refined-workspace .teacher-profile small {
+  font-size: 12px;
 }

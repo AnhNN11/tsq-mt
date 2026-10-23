@@ -77,6 +77,9 @@ import DashboardCharts from "./dashboard-charts";
 import AdminPanel from "./admin-panel";
 import PendingEnrollment from "./pending-enrollment";
 import { exportExcel } from "@/lib/excel-export";
+import { academicLabel, academicTag } from "@/lib/academic-tags";
+import StatusBadge from "./status-badge";
+import { studentDataIssues } from "@/lib/data-quality";
 
 type View =
   | "overview"
@@ -134,6 +137,7 @@ export default function WorkspaceDashboard() {
   } | null>(null);
   const [importing, setImporting] = useState(false);
   const [pending, setPending] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const migrated = useRef(false);
   useEffect(() => {
     if (!loading && !error && admin && revision <= 1 && !migrated.current) {
@@ -211,6 +215,7 @@ export default function WorkspaceDashboard() {
       await exportExcel({
         students: rows,
         talentTags: data.talentTags,
+        academicTags: data.academicTags,
         classes,
         lessons,
         subject,
@@ -536,7 +541,13 @@ export default function WorkspaceDashboard() {
                         label: "Học sinh",
                         tone: "green",
                         value: students.length,
-                        detail: `${students.filter((s) => genderOf(s) === "Nam").length} nam · ${students.filter((s) => genderOf(s) === "Nữ").length} nữ · ${students.filter((s) => genderOf(s) === "Chưa cập nhật").length} chưa cập nhật`,
+                        detail: genderSummary(students)
+                          .filter((g) => g.count)
+                          .map(
+                            (g) =>
+                              `${g.count} ${g.name.toLocaleLowerCase("vi")}`,
+                          )
+                          .join(" · "),
                         icon: <TeamOutlined aria-hidden />,
                       },
                       {
@@ -559,7 +570,7 @@ export default function WorkspaceDashboard() {
                         value: students.filter(
                           (s) => s.talents?.length || s.talentTagIds?.length,
                         ).length,
-                        detail: "Học sinh có đánh giá năng khiếu",
+                        detail: "Học sinh có thẻ hoặc đánh giá năng khiếu",
                         icon: <StarOutlined aria-hidden />,
                       },
                     ].map((stat) => (
@@ -575,7 +586,39 @@ export default function WorkspaceDashboard() {
                       </div>
                     ))}
                   </div>
-                  <DashboardCharts students={students} subject={subject} />
+                  <DashboardCharts
+                    students={students}
+                    subject={subject}
+                    academicTags={data.academicTags}
+                  />
+                  {students.some((s) => studentDataIssues(s).length > 0) && (
+                    <Alert
+                      className="data-quality-notice"
+                      type="warning"
+                      showIcon
+                      title={`${students.filter((s) => studentDataIssues(s).length > 0).length} hồ sơ cần đối chiếu dữ liệu`}
+                      description="Có thông tin còn thiếu hoặc chưa xác minh trong tài liệu nguồn."
+                      action={
+                        <Button
+                          onClick={() => {
+                            setReviewOpen(true);
+                            setStudentTab("pupils");
+                            navigate("students");
+                            requestAnimationFrame(() =>
+                              document
+                                .querySelector(".source-review-collapse")
+                                ?.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "start",
+                                }),
+                            );
+                          }}
+                        >
+                          Kiểm tra hồ sơ
+                        </Button>
+                      }
+                    />
+                  )}
                   <Collapse
                     className="overview-details"
                     items={[
@@ -791,8 +834,21 @@ export default function WorkspaceDashboard() {
                           {
                             title: "ĐẦU VÀO",
                             width: 95,
-                            render: (_, s) =>
-                              assessmentOf(s, subject).before || "—",
+                            render: (_, s) => (
+                              <StatusBadge
+                                color={
+                                  academicTag(
+                                    assessmentOf(s, subject).before,
+                                    data.academicTags,
+                                  )?.color ?? "#97671d"
+                                }
+                              >
+                                {academicLabel(
+                                  assessmentOf(s, subject).before,
+                                  data.academicTags,
+                                ) || "Chưa cập nhật"}
+                              </StatusBadge>
+                            ),
                           },
                           {
                             title: "HIỆN TẠI",
@@ -806,8 +862,10 @@ export default function WorkspaceDashboard() {
                                     : "green"
                                 }
                               >
-                                {assessmentOf(s, subject).after ||
-                                  "Chưa đánh giá"}
+                                {academicLabel(
+                                  assessmentOf(s, subject).after,
+                                  data.academicTags,
+                                ) || "Chưa đánh giá"}
                               </Tag>
                             ),
                           },
@@ -867,11 +925,13 @@ export default function WorkspaceDashboard() {
                     </section>
                   )}
                   <Collapse
+                    activeKey={reviewOpen ? ["review"] : []}
+                    onChange={(keys) => setReviewOpen(keys.includes("review"))}
                     className="source-review-collapse"
                     items={[
                       {
                         key: "review",
-                        label: "Các điểm cần đối chiếu trong tài liệu nguồn",
+                        label: `Đối chiếu dữ liệu (${students.filter((s) => studentDataIssues(s).length > 0).length} hồ sơ)`,
                         children: (
                           <SourceReviewTable
                             students={students}
@@ -982,6 +1042,7 @@ export default function WorkspaceDashboard() {
               )}
               {view === "reports" && (
                 <ReportView
+                  academicTags={data.academicTags}
                   talentTags={data.talentTags}
                   key={`${className}-${ethnicity}-${subject}`}
                   students={students}

@@ -3,12 +3,12 @@ import {
   ethnicitySummary,
   genderSummary,
   lessonStats,
-  LEVELS,
   type Lesson,
   type SchoolClass,
   type Student,
   type TalentTag,
 } from "./model";
+import { academicSummary, type AcademicTag } from "./academic-tags";
 export type ReportData = {
   students: Student[];
   classes: SchoolClass[];
@@ -20,6 +20,7 @@ export type ReportData = {
   schoolYear?: string;
   chartImages?: string[];
   talentTags?: TalentTag[];
+  academicTags?: AcademicTag[];
 };
 export function reportSummary(data: ReportData) {
   const stats = lessonStats(data.lessons);
@@ -33,13 +34,7 @@ export function reportSummary(data: ReportData) {
     ).length,
     ethnicities: ethnicitySummary(data.students),
     genders: genderSummary(data.students),
-    levels: [...LEVELS, "Chưa đánh giá"].map((name) => ({
-      name,
-      count: data.students.filter(
-        (s) =>
-          (assessmentOf(s, data.subject).after || "Chưa đánh giá") === name,
-      ).length,
-    })),
+    levels: academicSummary(data.students, data.subject, data.academicTags),
   };
 }
 export async function chartImages(selector = ".report-charts") {

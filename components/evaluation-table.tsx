@@ -20,17 +20,20 @@ import {
   EditOutlined,
   FileExcelOutlined,
   SearchOutlined,
+  TagsOutlined,
 } from "@ant-design/icons";
 import {
   assessmentOf,
-  entryLevelOptions,
   INTERACTIONS,
-  LEVELS,
   normalize,
   type Assessment,
   type Student,
 } from "@/lib/model";
 import { saveWorkspace } from "@/lib/store";
+import { useWorkspace } from "@/lib/store";
+import { academicOptions, academicTag } from "@/lib/academic-tags";
+import AcademicLevelSelect from "./academic-level-select";
+import AcademicTagManager from "./academic-tag-manager";
 
 type Props = {
   students: Student[];
@@ -48,6 +51,12 @@ export default function EvaluationTable({
   exportBusy,
 }: Props) {
   const { message } = App.useApp();
+  const { data } = useWorkspace();
+  const [tagManager, setTagManager] = useState(false);
+  const [level, setLevel] = useState("all");
+  const filterLevel = data.academicTags.some((t) => t.id === level)
+    ? level
+    : "all";
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
@@ -59,6 +68,9 @@ export default function EvaluationTable({
     const a = assessmentOf(s, subject);
     return (
       normalize(`${s.name} ${s.id}`).includes(normalize(query)) &&
+      (filterLevel === "all" ||
+        (academicTag(a.after, data.academicTags)?.id ?? a.after) ===
+          filterLevel) &&
       (status === "all" ||
         (status === "unassessed" && !a.after) ||
         (status === "assessed" && Boolean(a.after)) ||
@@ -109,6 +121,7 @@ export default function EvaluationTable({
       render: (_, s) => (
         <button className="student-cell" onClick={() => onOpenStudent(s)}>
           <Avatar
+            shape="square"
             size={34}
             style={{ background: "#eaf0e1", color: "#6d8457", fontSize: 11 }}
           >
@@ -135,13 +148,13 @@ export default function EvaluationTable({
         </>
       ),
       key: "before",
-      width: 145,
+      width: 185,
       render: (_, s) => (
-        <Select
+        <AcademicLevelSelect
+          stage="before"
           aria-label={`Đầu vào ${s.name}`}
           placeholder="Chưa đánh giá"
           value={assessmentOf(s, subject).before || undefined}
-          options={entryLevelOptions(s)}
           onChange={(value) => save(s, { before: value ?? "" })}
         />
       ),
@@ -154,9 +167,10 @@ export default function EvaluationTable({
         </>
       ),
       key: "after",
-      width: 155,
+      width: 185,
       render: (_, s) => (
-        <Select
+        <AcademicLevelSelect
+          stage="after"
           aria-label={`Học lực hiện tại ${s.name}`}
           placeholder="Chưa đánh giá"
           value={assessmentOf(s, subject).after || undefined}
@@ -166,7 +180,6 @@ export default function EvaluationTable({
               ? "warning"
               : undefined
           }
-          options={LEVELS.map((value) => ({ value, label: value }))}
           onChange={(value) => save(s, { after: value ?? "" })}
         />
       ),
@@ -247,18 +260,40 @@ export default function EvaluationTable({
           </h2>
           <p>
             <CheckOutlined aria-hidden /> Lựa chọn được lưu ngay. Mỗi học sinh
-            một dòng. Đầu vào lấy từ KQGD nguồn và có thể điều chỉnh theo môn.
+            một dòng. Đầu vào lấy từ kết quả giáo dục nguồn và có thể điều chỉnh
+            theo môn.
           </p>
         </div>
-        <Button
-          icon={<FileExcelOutlined aria-hidden />}
-          loading={exportBusy}
-          onClick={() => onExport(filtered)}
-        >
-          Xuất Excel
-        </Button>
+        <Space wrap>
+          <Button
+            icon={<TagsOutlined aria-hidden />}
+            onClick={() => setTagManager(true)}
+          >
+            Thẻ học lực
+          </Button>
+          <Button
+            icon={<FileExcelOutlined aria-hidden />}
+            loading={exportBusy}
+            onClick={() => onExport(filtered)}
+          >
+            Xuất Excel
+          </Button>
+        </Space>
       </div>
       <div className="table-toolbar">
+        <Select
+          aria-label="Lọc thẻ học lực"
+          value={filterLevel}
+          style={{ minWidth: 170 }}
+          options={[
+            { value: "all", label: "Tất cả học lực" },
+            ...academicOptions(data.academicTags, "after"),
+          ]}
+          onChange={(v) => {
+            setLevel(v);
+            setPage(1);
+          }}
+        />
         <Input
           aria-label="Tìm đánh giá học sinh"
           className="student-search"
@@ -323,6 +358,10 @@ export default function EvaluationTable({
         Đánh giá được lưu riêng theo môn học. Chọn môn và lớp ở thanh trên để
         quản lý từng nhóm học sinh.
       </div>
+      <AcademicTagManager
+        open={tagManager}
+        onClose={() => setTagManager(false)}
+      />
     </section>
   );
 }

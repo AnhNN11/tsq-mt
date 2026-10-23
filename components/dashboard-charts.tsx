@@ -9,33 +9,32 @@ import {
   YAxis,
 } from "recharts";
 import {
-  assessmentOf,
   ethnicitySummary,
-  LEVELS,
   TALENT_CATEGORIES,
   type Student,
   type TalentTag,
 } from "@/lib/model";
+import { academicSummary, type AcademicTag } from "@/lib/academic-tags";
 
 export default function DashboardCharts({
   students,
   subject,
   compact = false,
   talentTags = [],
+  academicTags,
 }: {
   students: Student[];
   subject: string;
   compact?: boolean;
   talentTags?: TalentTag[];
+  academicTags?: AcademicTag[];
 }) {
   const ethnicities = ethnicitySummary(students)
     .slice(0, 6)
     .map((g) => ({ name: g.ethnicity, "Học sinh": g.count }));
-  const levels = [...LEVELS, "Chưa đánh giá"].map((name) => ({
-    name,
-    "Học sinh": students.filter(
-      (s) => (assessmentOf(s, subject).after || "Chưa đánh giá") === name,
-    ).length,
+  const levels = academicSummary(students, subject, academicTags).map((g) => ({
+    name: g.name,
+    "Học sinh": g.count,
   }));
   const talents = TALENT_CATEGORIES.map((name) => ({
     name,
@@ -56,20 +55,19 @@ export default function DashboardCharts({
         </div>
         <BarChart
           responsive
-          style={{ width: "100%", height: 255 }}
+          style={{ width: "100%", height: Math.max(255, levels.length * 38) }}
           data={levels}
-          layout={compact ? "vertical" : "horizontal"}
+          layout="vertical"
           margin={{ left: 0, right: 12, bottom: 12 }}
           accessibilityLayer
         >
           <CartesianGrid vertical={false} stroke="#e7ece5" />
           <XAxis
-            dataKey={compact ? undefined : "name"}
-            type={compact ? "number" : "category"}
+            type="number"
             allowDecimals={false}
             interval={0}
             tick={{
-              fontSize: compact ? 19 : 10,
+              fontSize: compact ? 19 : 12,
               fontFamily: compact ? "Times New Roman" : undefined,
             }}
             axisLine={false}
@@ -77,11 +75,11 @@ export default function DashboardCharts({
           />
           <YAxis
             allowDecimals={false}
-            type={compact ? "category" : "number"}
-            dataKey={compact ? "name" : undefined}
-            width={compact ? 155 : 35}
+            type="category"
+            dataKey="name"
+            width={compact ? 155 : 145}
             tick={{
-              fontSize: compact ? 19 : 11,
+              fontSize: compact ? 19 : 12,
               fontFamily: compact ? "Times New Roman" : undefined,
             }}
             axisLine={false}
@@ -91,7 +89,7 @@ export default function DashboardCharts({
           <Bar
             dataKey="Học sinh"
             fill="#315b35"
-            radius={[5, 5, 0, 0]}
+            radius={0}
             maxBarSize={46}
             isAnimationActive={false}
           />
@@ -147,7 +145,7 @@ export default function DashboardCharts({
             dataKey="Học sinh"
             name={compact ? "Có thẻ hoặc đánh giá" : "Học sinh"}
             fill={compact ? "#b63b3b" : "#8b9d66"}
-            radius={[0, 5, 5, 0]}
+            radius={0}
             maxBarSize={18}
             isAnimationActive={false}
           />

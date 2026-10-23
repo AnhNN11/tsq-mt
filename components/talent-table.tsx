@@ -51,15 +51,18 @@ export default function TalentTable({
   const [busy, setBusy] = useState(false);
   const [form] = Form.useForm<TalentAssessment>();
   const rows: Row[] = students
-    .flatMap<Row>((student) =>
-      student.talents?.length
-        ? student.talents.map((talent) => ({
+    .flatMap<Row>((student) => {
+      const records = (student.talents ?? []).filter(
+        (t) => category === "all" || t.category === category,
+      );
+      return records.length
+        ? records.map((talent) => ({
             student,
             talent,
             key: `${student.id}-${talent.id}`,
           }))
-        : [{ student, key: student.id }],
-    )
+        : [{ student, key: student.id }];
+    })
     .filter(
       (row) =>
         normalize(row.student.name).includes(normalize(query)) &&
@@ -68,8 +71,14 @@ export default function TalentTable({
             ? !row.student.talentTagIds?.length
             : row.student.talentTagIds?.includes(tagId))) &&
         (category === "all" ||
-          (category === "none" && !row.talent) ||
-          row.talent?.category === category),
+          (category === "none" && !row.student.talents?.length) ||
+          row.talent?.category === category ||
+          (!row.talent &&
+            tags.some(
+              (t) =>
+                t.category === category &&
+                row.student.talentTagIds?.includes(t.id),
+            ))),
     );
   function open(row: Row, fresh = false) {
     setEditing({ ...row, talent: fresh ? undefined : row.talent });
@@ -155,8 +164,12 @@ export default function TalentTable({
           <h2>
             Năng khiếu & bồi dưỡng{" "}
             <span className="count-pill">
-              {students.filter((s) => s.talents?.length).length}/
-              {students.length} học sinh
+              {
+                students.filter(
+                  (s) => s.talents?.length || s.talentTagIds?.length,
+                ).length
+              }
+              /{students.length} học sinh
             </span>
           </h2>
           <p>

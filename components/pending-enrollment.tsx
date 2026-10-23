@@ -215,7 +215,7 @@ export default function PendingEnrollment({
                           {s.strengths || "Chưa cập nhật"}
                         </p>
                         <p>
-                          <strong>KQGD nguồn:</strong>
+                          <strong>kết quả giáo dục nguồn:</strong>
                           <br />
                           {s.priorEducation || "Chưa cập nhật"}
                         </p>

@@ -1,4 +1,5 @@
 import { assessmentOf, reportRows, talentTagNames, genderOf } from "./model";
+import { academicLabel } from "./academic-tags";
 import { downloadBlob, reportSummary, type ReportData } from "./report-data";
 
 export async function exportExcel(
@@ -241,7 +242,7 @@ export async function exportExcel(
   row += 2;
   merged(
     `A${row}:H${row}`,
-    "Đầu vào lấy từ KQGD nguồn hoặc giáo viên điều chỉnh. Chưa đánh giá được giữ riêng. Bộ lọc dân tộc giới hạn học sinh; tiết và bài theo lớp, môn và kỳ giảng dạy.",
+    "Đầu vào lấy từ kết quả giáo dục nguồn hoặc giáo viên điều chỉnh. Chưa đánh giá được giữ riêng. Bộ lọc dân tộc giới hạn học sinh; tiết và bài theo lớp, môn và kỳ giảng dạy.",
     10,
   );
   overview.getRow(row).height = 60;
@@ -261,7 +262,7 @@ export async function exportExcel(
   table(
     "Học sinh",
     [
-      "STT",
+      "Số thứ tự",
       "Họ và tên",
       "Lớp",
       "Ngày sinh",
@@ -281,8 +282,8 @@ export async function exportExcel(
         s.birthDate,
         genderOf(s),
         s.ethnicity.split("\n")[0],
-        a.before,
-        a.after || "Chưa đánh giá",
+        academicLabel(a.before, data.academicTags),
+        academicLabel(a.after, data.academicTags) || "Chưa đánh giá",
         a.interaction,
         a.note,
       ];
@@ -339,7 +340,7 @@ export async function exportExcel(
     ]),
     [17, 10, 20, 50, 12, 60],
   );
-  const raw = reportRows(data.students, data.subject);
+  const raw = reportRows(data.students, data.subject, data.academicTags);
   table(
     "Trích ngang",
     raw[0],

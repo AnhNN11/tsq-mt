@@ -29,6 +29,7 @@ import { chartImages, reportSummary } from "@/lib/report-data";
 import { exportExcel } from "@/lib/excel-export";
 import { exportDocx } from "@/lib/docx-export";
 import DashboardCharts from "./dashboard-charts";
+import { academicLabel, type AcademicTag } from "@/lib/academic-tags";
 
 type Props = {
   students: Student[];
@@ -40,6 +41,7 @@ type Props = {
   teacherName?: string;
   schoolYear?: string;
   talentTags: TalentTag[];
+  academicTags: AcademicTag[];
 };
 export default function ReportView({
   students,
@@ -51,6 +53,7 @@ export default function ReportView({
   teacherName = "Giáo viên",
   schoolYear = "2026 – 2027",
   talentTags,
+  academicTags,
 }: Props) {
   const { message } = App.useApp();
   const [from, setFrom] = useState("");
@@ -75,6 +78,7 @@ export default function ReportView({
     teacherName,
     schoolYear,
     talentTags,
+    academicTags,
     period:
       from || to
         ? `${from || "Từ đầu"} → ${to || "Hiện tại"}`
@@ -219,6 +223,7 @@ export default function ReportView({
         </div>
         <div className="report-charts">
           <DashboardCharts
+            academicTags={academicTags}
             talentTags={talentTags}
             students={displayed}
             subject={subject}
@@ -372,10 +377,10 @@ export default function ReportView({
           </p>
         )}
         <p className="muted small report-note">
-          Đầu vào giữ mã KQGD nguồn hoặc điều chỉnh của giáo viên. Chưa đánh giá
-          được giữ riêng. Khoảng ngày chỉ giới hạn bài và tiết dạy; đánh giá
-          phản ánh hiện trạng khi xuất báo cáo. Một học sinh có thể có nhiều
-          năng khiếu.
+          Đầu vào giữ mã kết quả giáo dục nguồn hoặc điều chỉnh của giáo viên.
+          Chưa đánh giá được giữ riêng. Khoảng ngày chỉ giới hạn bài và tiết
+          dạy; đánh giá phản ánh hiện trạng khi xuất báo cáo. Một học sinh có
+          thể có nhiều năng khiếu.
         </p>
       </article>
       <Collapse
@@ -397,12 +402,19 @@ export default function ReportView({
                   { title: "DÂN TỘC", render: (_, s) => ethnicityOf(s) },
                   {
                     title: "ĐẦU VÀO",
-                    render: (_, s) => assessmentOf(s, subject).before || "—",
+                    render: (_, s) =>
+                      academicLabel(
+                        assessmentOf(s, subject).before,
+                        academicTags,
+                      ) || "—",
                   },
                   {
                     title: "HIỆN TẠI",
                     render: (_, s) =>
-                      assessmentOf(s, subject).after || "Chưa đánh giá",
+                      academicLabel(
+                        assessmentOf(s, subject).after,
+                        academicTags,
+                      ) || "Chưa đánh giá",
                   },
                   {
                     title: "NHẬN XÉT",

@@ -2,6 +2,7 @@
 
 import { Button, Table, Tag } from "antd";
 import type { Student } from "@/lib/model";
+import { studentDataIssues } from "@/lib/data-quality";
 
 export default function SourceReviewTable({
   students,
@@ -10,9 +11,7 @@ export default function SourceReviewTable({
   students: Student[];
   onOpen: (student: Student) => void;
 }) {
-  const rows = students.filter((s) =>
-    /trùng tên|cần đối chiếu|chưa có hồ sơ chi tiết/i.test(s.notes),
-  );
+  const rows = students.filter((s) => studentDataIssues(s).length);
   if (!rows.length) return null;
   return (
     <section className="list-panel review-panel">
@@ -22,7 +21,10 @@ export default function SourceReviewTable({
             Cần đối chiếu dữ liệu{" "}
             <span className="count-pill">{rows.length} hồ sơ</span>
           </h2>
-          <p>Các điểm được đánh dấu trong danh sách nguồn mới nhất.</p>
+          <p>
+            Thông tin còn thiếu hoặc chưa xác minh; giữ dữ liệu gốc để đối
+            chiếu.
+          </p>
         </div>
         <Tag color="orange">Chờ xác nhận</Tag>
       </div>
@@ -30,12 +32,15 @@ export default function SourceReviewTable({
         size="small"
         rowKey="id"
         dataSource={rows}
-        pagination={false}
+        pagination={{ pageSize: 8, showSizeChanger: false }}
         scroll={{ x: 650 }}
         columns={[
           { title: "HỌC SINH", dataIndex: "name", width: 220 },
           { title: "LỚP", dataIndex: "className", width: 80 },
-          { title: "NỘI DUNG CẦN KIỂM TRA", dataIndex: "notes" },
+          {
+            title: "NỘI DUNG CẦN KIỂM TRA",
+            render: (_, s) => studentDataIssues(s).join("\n"),
+          },
           {
             title: "",
             key: "action",

@@ -77,7 +77,12 @@ export default function TalentTagManager({
           ...s,
           talentTagIds: (s.talentTagIds ?? []).filter((tagId) => tagId !== id),
         })),
-        pendingStudents: current.pendingStudents,
+        pendingStudents: current.pendingStudents.map((s) => ({
+          ...s,
+          ...(s.talentTagIds?.includes(id)
+            ? { talentTagIds: s.talentTagIds.filter((tagId) => tagId !== id) }
+            : {}),
+        })),
       }));
       message.success("Đã xóa thẻ năng khiếu.");
     } catch (e) {

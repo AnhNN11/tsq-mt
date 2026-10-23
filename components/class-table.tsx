@@ -25,6 +25,7 @@ import {
   isComplete,
   ethnicityOf,
   genderOf,
+  GENDERS,
   lessonStats,
   normalize,
   type SchoolClass,
@@ -111,7 +112,8 @@ export default function ClassTable({
       ),
     },
     {
-      title: ethnicity === "all" ? "SĨ SỐ" : "HỌC SINH ĐÃ LỌC",
+      title:
+        ethnicity === "all" && gender === "all" ? "SĨ SỐ" : "HỌC SINH ĐÃ LỌC",
       key: "size",
       width: 110,
       render: (_, c) => (
@@ -236,7 +238,10 @@ export default function ClassTable({
   columns.splice(
     2,
     0,
-    ...["Nam", "Nữ", "Chưa cập nhật"].map((name) => ({
+    ...GENDERS.filter(
+      (name) =>
+        name !== "Khác" || data.students.some((s) => genderOf(s) === "Khác"),
+    ).map((name) => ({
       title: name.toLocaleUpperCase("vi"),
       width: name === "Chưa cập nhật" ? 130 : 75,
       render: (_: unknown, c: SchoolClass) =>
