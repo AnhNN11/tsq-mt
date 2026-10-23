@@ -1,0 +1,113 @@
+.evaluation-table-panel .ant-table-tbody .ant-select {
+  width: 100%;
+  font-size: 11px;
+}
+.evaluation-table-panel .ant-table-tbody .ant-select-selector {
+  font-size: 11px !important;
+  min-height: 34px !important;
+}
+.evaluation-table-panel .ant-table-tbody > tr > td {
+  padding-inline: 12px;
+  padding-block: 14px;
+}
+.evaluation-table-panel .panel-heading p > .anticon {
+  color: #789762;
+  margin-right: 3px;
+}
+.evaluation-table-panel .ant-table-tbody > tr.assessment-needs-support > td {
+  background: #fffcf4;
+}
+.evaluation-table-panel
+  .ant-table-tbody
+  > tr.assessment-needs-support
+  > td:first-child {
+  border-left: 3px solid #c09a56;
+}
+.evaluation-table-panel
+  .ant-table-tbody
+  > tr.assessment-needs-support
+  > td.ant-table-cell-fix-right {
+  background: #fffcf4 !important;
+}
+.evaluation-table-panel .student-cell strong {
+  font-size: 12px;
+}
+.evaluation-table-panel .student-cell small {
+  font-size: 10px;
+}
+.evaluation-table-panel .count-pill {
+  font-size: 9px;
+}
+.scope-row > .ant-space {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  min-width: 0;
+}
+.ethnicity-panel {
+  margin-bottom: 18px;
+}
+.ethnicity-panel .panel-heading {
+  padding-bottom: 16px;
+}
+.ethnicity-class-count {
+  font-weight: 600;
+  color: #315b35;
+}
+.ethnicity-panel .ant-table-summary {
+  background: #f4f7ef;
+}
+.ethnicity-panel .ant-table-tbody > tr.ethnicity-selected-row > td {
+  background: #edf4e7;
+}
+.review-panel {
+  margin-bottom: 18px;
+}
+.review-panel .panel-heading {
+  padding-bottom: 14px;
+}
+.review-panel .ant-table-cell {
+  white-space: pre-line;
+}
+.report-assessments {
+  min-width: 850px;
+}
+.report-assessments td {
+  white-space: pre-line;
+  vertical-align: top;
+}
+@media (max-width: 700px) {
+  .scope-row > .ant-space {
+    width: 100%;
+    gap: 8px !important;
+  }
+  .scope-row .class-icon,
+  .scope-row .scope-divider {
+    display: none;
+  }
+  .scope-row .ethnicity-scope-select {
+    min-width: 175px !important;
+  }
+}
+@media print {
+  .report-assessments {
+    min-width: 0;
+    table-layout: fixed;
+    font-size: 9px;
+  }
+  .report-assessments th,
+  .report-assessments td {
+    overflow-wrap: anywhere;
+    padding: 5px;
+  }
+}
+@media (max-height: 800px) {
+  .sidebar-note {
+    display: none;
+  }
+  .sidebar-bottom {
+    padding-top: 20px;
+  }
+  .sidebar {
+    overflow-y: auto;
+  }
+}

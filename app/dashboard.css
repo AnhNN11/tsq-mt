@@ -1,0 +1,2490 @@
+:root {
+  --canvas: #f6f7f3;
+  --ink: #24342e;
+  --muted: #8a918b;
+  --green: #347566;
+  --line: #e7eae3;
+  --sidebar: #fdfefb;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: var(--canvas);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+button,
+a,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font-family: inherit;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #347566;
+  outline-offset: 4px;
+}
+button {
+  cursor: pointer;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+.workspace {
+  min-height: 100vh;
+}
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 236px;
+  background: var(--sidebar);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  z-index: 30;
+  padding: 34px 18px 0;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 12px;
+  color: #304b3d;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+.brand small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  font-weight: 400;
+  margin-top: 4px;
+  color: #8c958b;
+}
+.workspace-label {
+  font-size: 9px;
+  letter-spacing: 1.4px;
+  font-weight: 600;
+  color: #a0a79e;
+  margin: 49px 14px 17px;
+}
+.nav-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #7a8479;
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  font-size: 13px;
+  border-radius: 7px;
+  text-align: left;
+  margin-bottom: 7px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.nav-item > .anticon {
+  font-size: 18px;
+}
+.nav-item:hover {
+  background: #f0f3ed;
+  color: #347566;
+}
+.nav-item.active {
+  background: #e8f0e7;
+  color: #386547;
+  font-weight: 600;
+}
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 3px;
+  height: 24px;
+  border-radius: 0 3px 3px 0;
+  background: #558465;
+}
+.nav-count {
+  margin-left: auto;
+  background: #d6e4d4;
+  font-size: 11px;
+  min-width: 25px;
+  text-align: center;
+  border-radius: 5px;
+  padding: 2px 5px;
+  color: #4a704d;
+}
+.sidebar-bottom {
+  margin-top: auto;
+  padding-top: 55px;
+}
+.sidebar-note {
+  margin: 0 6px 30px;
+  padding: 19px 17px;
+  background: #f3f5ed;
+  border: 1px solid #e7ecdf;
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.sidebar-note:after {
+  content: "";
+  position: absolute;
+  width: 75px;
+  height: 75px;
+  right: -25px;
+  top: -22px;
+  border: 12px solid #e9eddf;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.note-icon {
+  color: #7c916a;
+  font-size: 23px;
+}
+.sidebar-note h4 {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 11px;
+  line-height: 1.6;
+}
+.sidebar-note p {
+  font-size: 11px;
+  color: #919987;
+  line-height: 1.8;
+  margin-top: 6px;
+}
+.sidebar-note button {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin-top: 14px;
+  color: #5a7b51;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+.settings-link {
+  font-size: 12px;
+  padding-bottom: 20px;
+}
+.teacher-profile {
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  padding: 21px 7px 25px;
+}
+.teacher-profile strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.teacher-profile small {
+  display: block;
+  font-size: 10px;
+  color: #91998b;
+  margin-top: 4px;
+}
+.online-dot {
+  width: 6px;
+  height: 6px;
+  background: #7ea57c;
+  border-radius: 50%;
+  margin-left: auto;
+}
+.main-shell {
+  margin-left: 236px;
+}
+.topbar {
+  height: 80px;
+  background: #fdfefb;
+  border-bottom: 1px solid var(--line);
+  padding: 0 37px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 11px;
+  color: #99a093;
+}
+.breadcrumbs strong {
+  font-weight: 500;
+  color: #596553;
+}
+.breadcrumb-slash {
+  color: #c5cabf;
+}
+.school-year {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #7d8776;
+  white-space: nowrap;
+}
+.school-year .anticon {
+  font-size: 15px;
+}
+.topbar-divider {
+  width: 1px;
+  height: 19px;
+  display: inline-block;
+  background: var(--line);
+}
+.topbar .ant-select-outlined .ant-select-selector {
+  background: transparent !important;
+  border-color: transparent !important;
+  font-size: 12px !important;
+}
+.main-content {
+  max-width: 1640px;
+  padding: 35px 37px 22px;
+  margin: auto;
+}
+.page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.eyebrow {
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  font-weight: 600;
+  color: #8a9580;
+  line-height: 1.5;
+}
+.eyebrow > span {
+  color: #c0c8b9;
+  padding: 0 5px;
+}
+h1 {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -1.1px;
+  line-height: 1.4;
+  margin-top: 10px;
+}
+.heading-dot {
+  color: #8aa477;
+  margin-left: 3px;
+}
+.page-heading p {
+  font-size: 12px;
+  color: #90988a;
+  margin-top: 7px;
+}
+.page-heading .ant-btn {
+  font-size: 12px;
+  height: 38px;
+  padding-inline: 15px;
+}
+.page-heading .ant-btn-primary {
+  background: #347566;
+}
+.scope-row {
+  margin-top: 29px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  font-size: 12px;
+}
+.class-icon {
+  display: grid;
+  place-items: center;
+  background: #edf1e7;
+  border: 1px solid #e6eadd;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  color: #6a815c;
+  font-size: 15px;
+}
+.class-select {
+  min-width: 120px;
+}
+.class-select .ant-select-selector {
+  border: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  padding-left: 0 !important;
+  font-weight: 600;
+  font-size: 13px !important;
+}
+.scope-divider {
+  height: 15px;
+  width: 1px;
+  background: #dce2d5;
+  display: block;
+  margin-inline: 4px;
+}
+.source-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #91998b;
+  font-size: 10px;
+}
+.source-pill > span {
+  height: 5px;
+  width: 5px;
+  border-radius: 50%;
+  background: #7d9d6c;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 17px;
+  margin-bottom: 29px;
+}
+.stat-card {
+  background: #fdfefb;
+  border: 1px solid #e3e7dc;
+  border-radius: 10px;
+  padding: 18px 21px 16px;
+  box-shadow: 0 2px 3px #25362402;
+}
+.stat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #849079;
+}
+.stat-icon {
+  width: 33px;
+  height: 33px;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  border-radius: 9px;
+}
+.stat-icon.green {
+  background: #edf2e8;
+  color: #829d6d;
+}
+.stat-icon.blue {
+  background: #eaf0f6;
+  color: #7d9bb7;
+}
+.stat-icon.ochre {
+  background: #f8f0e0;
+  color: #bca16c;
+}
+.stat-icon.purple {
+  background: #f0ecf5;
+  color: #a28eb6;
+}
+.stat-value {
+  font-size: 31px;
+  font-weight: 600;
+  letter-spacing: -0.8px;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.stat-value > span {
+  font-size: 11px;
+  color: #939b8a;
+  font-weight: 400;
+  letter-spacing: 0;
+  margin-left: 8px;
+}
+.stat-detail {
+  font-size: 10px;
+  color: #9ba38f;
+  margin-top: 6px;
+  padding-top: 11px;
+  border-top: 1px solid #eff1eb;
+}
+.list-panel {
+  background: #fdfefb;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  overflow: hidden;
+  box-shadow: 0 2px 7px #29362702;
+}
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 23px 24px 0;
+}
+.panel-heading h2 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.35px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.panel-heading p {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #989f91;
+  margin-top: 6px;
+}
+.panel-heading .ant-btn {
+  font-size: 11px;
+  height: 34px;
+}
+.count-pill {
+  font-size: 10px;
+  background: #f0f2e9;
+  color: #79836a;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.student-tabs {
+  padding: 0 24px;
+  margin-top: 10px;
+}
+.student-tabs .ant-tabs-nav {
+  margin: 0;
+}
+.student-tabs .ant-tabs-tab {
+  font-size: 11px;
+  padding: 17px 0 15px;
+}
+.student-tabs .ant-tabs-nav::before {
+  border-color: #e9ece4;
+}
+.student-tabs .ant-tabs-ink-bar {
+  height: 2px !important;
+}
+.tab-count {
+  font-size: 9px;
+  display: inline-block;
+  border-radius: 4px;
+  background: #f0f2eb;
+  color: #98a08c;
+  padding: 0 5px;
+  margin-left: 5px;
+}
+.ant-tabs-tab-active .tab-count {
+  background: #eaf0e5;
+  color: #749260;
+}
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 19px 24px;
+}
+.student-search {
+  max-width: 325px;
+  font-size: 11px;
+  flex: 1;
+}
+.student-search .ant-input {
+  font-size: 11px;
+}
+.student-search .ant-input-prefix {
+  margin-inline-end: 9px;
+  color: #a1aa94;
+}
+.table-toolbar .ant-select {
+  font-size: 11px;
+}
+.table-toolbar .ant-select-selector {
+  font-size: 11px !important;
+}
+.list-panel .ant-table-wrapper .ant-table {
+  font-size: 12px;
+  background: #fdfefb;
+}
+.list-panel .ant-table-thead > tr > th {
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+  border-top: 1px solid #edf0e6 !important;
+  border-bottom: 1px solid #e9ece2 !important;
+  padding-block: 13px !important;
+}
+.list-panel .ant-table-thead > tr > th:before {
+  display: none !important;
+}
+.list-panel .ant-table-tbody > tr > td {
+  border-bottom-color: #f0f2eb !important;
+  padding-block: 15px;
+}
+.list-panel .ant-table-cell-fix-right {
+  background: #fdfefb !important;
+}
+.list-panel .ant-table-selection-column {
+  padding-left: 23px !important;
+  width: 50px !important;
+  min-width: 50px !important;
+}
+.list-panel .ant-checkbox-inner {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border-color: #dbe0d2;
+}
+.student-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: 0;
+  text-align: left;
+  padding: 0;
+  color: #46543e;
+  white-space: normal;
+}
+.student-cell > span:last-child {
+  flex: 1;
+}
+.student-cell strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.student-cell small {
+  display: block;
+  font-size: 10px;
+  color: #9da591;
+  margin-top: 4px;
+}
+.student-cell:hover strong {
+  color: #347566;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.dot-separator {
+  padding: 0 4px;
+  color: #bec5b5;
+}
+.unfilled {
+  font-size: 11px;
+  color: #adb4a3;
+}
+.block-badge {
+  font-size: 10px;
+  padding: 2px 5px;
+  background: #f0f3ea;
+  color: #8a987c;
+  border-radius: 4px;
+  margin-left: 3px;
+}
+.column-subtitle {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0;
+  color: #a5ae9b;
+  text-transform: none;
+  margin-top: 3px;
+}
+.list-panel .ant-tag {
+  font-size: 10px;
+  line-height: 20px;
+  border-radius: 4px;
+  margin-inline-end: 0;
+  max-width: 200px;
+  white-space: normal;
+}
+.list-panel .ant-badge-status-text {
+  font-size: 10px !important;
+  color: #7d8974 !important;
+}
+.list-panel .ant-btn-text {
+  color: #9ba68f;
+}
+.list-panel .delete-action:hover {
+  color: #bd685b !important;
+}
+.list-panel .ant-pagination {
+  margin: 0 !important;
+  padding: 19px 23px;
+  font-size: 11px;
+  align-items: center;
+  flex-wrap: wrap;
+  border-top: 1px solid #f0f2eb;
+}
+.list-panel .ant-pagination-total-text {
+  margin-right: auto;
+  color: #9ba38f;
+  font-size: 10px;
+}
+.ant-pagination-total-text strong {
+  font-weight: 500;
+  color: #6d7a60;
+}
+.list-panel .ant-pagination .ant-pagination-item {
+  font-size: 11px;
+  min-width: 28px;
+  height: 28px;
+  line-height: 26px;
+  border-radius: 5px;
+}
+.list-panel .ant-pagination-options .ant-select {
+  font-size: 10px !important;
+}
+.list-panel .ant-pagination-options .ant-select-selector {
+  height: 28px !important;
+}
+.page-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: #a7ae9e;
+  margin-top: 20px;
+  gap: 12px;
+  line-height: 1.7;
+}
+.page-footer .anticon {
+  margin-right: 5px;
+}
+.page-footer > span:last-child {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.page-footer button {
+  border: 0;
+  background: none;
+  font-size: 10px;
+  padding: 0;
+  color: #89957a;
+}
+.footer-dot {
+  color: #b2bba8;
+  font-size: 5px;
+}
+.selection-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 24px;
+  background: #edf4ec;
+  color: #5e7753;
+  font-size: 12px;
+}
+.profile-heading {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  padding: 0 0 24px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+.profile-heading h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 7px;
+}
+.profile-avatar {
+  width: 57px;
+  height: 57px;
+  background: #edf2e7;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: #739266;
+  font-size: 25px;
+}
+.source-note {
+  color: #9aa48f;
+  font-size: 11px;
+  line-height: 1.8;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+.source-note strong {
+  font-weight: 500;
+  color: #718066;
+}
+.editor-note {
+  padding: 15px;
+  background: #f2f5ed;
+  border: 1px solid #e8eddf;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #849075;
+  margin-bottom: 22px;
+}
+.ant-form-item label {
+  font-size: 12px !important;
+}
+.ant-form-item-explain,
+.ant-form-item-extra {
+  font-size: 11px !important;
+}
+.ant-drawer .ant-tabs-tab {
+  font-size: 12px;
+}
+.ant-modal-body > .muted {
+  margin: 12px 0 18px;
+  line-height: 1.7;
+}
+.import-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin: 17px 0 13px;
+}
+.import-summary strong {
+  font-size: 12px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.ant-modal .ant-alert {
+  margin: 12px 0;
+}
+.ant-modal .small {
+  margin-top: 12px;
+}
+.overview-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 22px;
+}
+.overview-card .panel-heading {
+  padding-bottom: 20px;
+}
+.coverage-list {
+  padding: 0 25px;
+}
+.coverage-list > div {
+  margin: 10px 0 20px;
+}
+.coverage-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #8d9981;
+  margin-bottom: 6px;
+}
+.coverage-label strong {
+  font-size: 13px;
+  color: #566b49;
+  font-weight: 600;
+}
+.coverage-label small {
+  font-weight: 400;
+  color: #a2ac96;
+}
+.overview-card > .ant-btn {
+  margin: 0 10px 16px;
+  font-size: 12px;
+}
+.interaction-list {
+  padding: 0 25px;
+}
+.interaction-list > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #819372;
+  padding: 15px 0;
+  border-bottom: 1px solid #eff2e9;
+}
+.interaction-list strong {
+  margin-left: auto;
+  color: #536947;
+}
+.interaction-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c0cbb5;
+}
+.dot-0 {
+  background: #72976a;
+}
+.dot-1 {
+  background: #9eafc0;
+}
+.dot-2 {
+  background: #d0b67f;
+}
+.dot-3 {
+  background: #c3a2a0;
+}
+.overview-tip {
+  margin: 24px;
+  padding: 16px;
+  border-radius: 7px;
+  background: #f4f6ee;
+  display: flex;
+  gap: 13px;
+  color: #98a28c;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.overview-tip > .anticon {
+  font-size: 22px;
+  color: #9da98c;
+  margin-top: 3px;
+}
+.report-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: end;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.filter-caption {
+  display: block;
+  font-size: 11px;
+  color: #919d85;
+  margin-bottom: 8px;
+}
+.report-toolbar input {
+  font-size: 12px;
+}
+.report-toolbar .ant-btn {
+  font-size: 12px;
+}
+.report-paper {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 40px;
+}
+.report-title {
+  text-align: center;
+}
+.report-title h2 {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  margin: 12px 0;
+}
+.report-title p {
+  font-size: 12px;
+  color: #84907b;
+}
+.report-numbers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid #e3e9dc;
+  border-radius: 8px;
+  padding: 20px 0;
+  margin: 30px 0;
+}
+.report-numbers > div {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+  border-right: 1px solid #e6ebdf;
+}
+.report-numbers > div:last-child {
+  border: 0;
+}
+.report-numbers b {
+  font-size: 25px;
+  font-weight: 600;
+  color: #496b3f;
+}
+.report-numbers span {
+  font-size: 10px;
+  color: #9da88f;
+}
+.report-paper h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 28px 0 12px;
+}
+.report-paper p {
+  font-size: 12px;
+  line-height: 1.9;
+}
+.report-students {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.report-student {
+  border: 1px solid #e6ebdf;
+  border-radius: 8px;
+  padding: 19px;
+  break-inside: avoid;
+}
+.report-student-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.report-student-title h4 {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.report-student-title .ant-tag {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.report-student dl {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.report-student dl > div {
+  display: grid;
+  grid-template-columns: 145px 1fr;
+  gap: 10px;
+  margin-top: 7px;
+}
+.report-student dt {
+  color: #949f88;
+}
+.report-student dd {
+  margin: 0;
+  color: #586a4a;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.report-table-wrap {
+  overflow-x: auto;
+}
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin: 20px 0;
+}
+.report-table th,
+.report-table td {
+  text-align: left;
+  padding: 10px;
+  border: 1px solid #e6ebdf;
+  vertical-align: top;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.report-table th {
+  background: #f4f6f0;
+  font-weight: 500;
+}
+.error-text {
+  font-size: 12px;
+  color: #bd6255;
+  margin-bottom: 15px;
+}
+.storage-alert {
+  margin-bottom: 20px;
+}
+.mobile-menu.ant-btn,
+.sidebar-overlay {
+  display: none;
+}
+@media (min-width: 1600px) {
+  .main-content {
+    padding-top: 43px;
+  }
+  .stats-grid {
+    gap: 22px;
+  }
+  .stat-card {
+    padding: 21px 25px;
+  }
+  .page-heading p {
+    font-size: 13px;
+  }
+  .scope-row {
+    margin-top: 32px;
+  }
+  .list-panel .ant-table-tbody > tr > td {
+    padding-block: 18px;
+  }
+  .table-toolbar {
+    padding-block: 22px;
+  }
+}
+@media (max-width: 1250px) {
+  .sidebar {
+    width: 210px;
+    padding-inline: 12px;
+  }
+  .main-shell {
+    margin-left: 210px;
+  }
+  .brand {
+    font-size: 22px;
+    padding-inline: 9px;
+  }
+  .topbar {
+    padding-inline: 26px;
+  }
+  .main-content {
+    padding-inline: 26px;
+  }
+  .school-year {
+    display: none;
+  }
+  .topbar-divider {
+    display: none;
+  }
+  .stat-card {
+    padding-inline: 15px;
+  }
+  .stat-top {
+    font-size: 10px;
+  }
+  .stat-detail {
+    font-size: 9px;
+  }
+  .page-heading {
+    align-items: flex-start;
+  }
+  .page-heading > .ant-space {
+    padding-top: 24px;
+  }
+  .page-heading .ant-btn {
+    padding-inline: 11px;
+  }
+  .report-paper {
+    padding: 28px;
+  }
+  .report-students {
+    grid-template-columns: 1fr;
+  }
+  .page-footer {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 1000px) {
+  .sidebar {
+    width: 190px;
+  }
+  .main-shell {
+    margin-left: 190px;
+  }
+  .brand {
+    font-size: 20px;
+    gap: 9px;
+  }
+  .brand small {
+    font-size: 8px;
+  }
+  .workspace-label {
+    font-size: 8px;
+    margin-inline: 10px;
+  }
+  .nav-item {
+    font-size: 12px;
+    padding-inline: 11px;
+    gap: 11px;
+  }
+  .sidebar-note {
+    padding: 14px;
+  }
+  .sidebar-note h4 {
+    font-size: 11px;
+  }
+  .topbar {
+    height: 70px;
+    padding-inline: 22px;
+  }
+  .main-content {
+    padding: 27px 22px;
+  }
+  .breadcrumbs {
+    font-size: 10px;
+    gap: 9px;
+  }
+  .topbar > .ant-space {
+    gap: 7px !important;
+  }
+  .topbar .ant-avatar {
+    display: none;
+  }
+  .stats-grid {
+    gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stat-card {
+    padding: 15px 18px;
+  }
+  .stat-value {
+    font-size: 28px;
+  }
+  .stat-top {
+    font-size: 11px;
+  }
+  .stat-detail {
+    font-size: 10px;
+  }
+  .scope-row {
+    margin-top: 22px;
+  }
+  .page-heading {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .page-heading > .ant-space {
+    padding: 0;
+  }
+  .source-pill {
+    display: none;
+  }
+  .table-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+  .student-search {
+    max-width: none;
+    flex-basis: 100%;
+  }
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+  .panel-heading {
+    padding: 20px 19px 0;
+  }
+  .student-tabs {
+    padding-inline: 19px;
+  }
+  .table-toolbar {
+    padding: 15px 19px;
+  }
+  .student-tabs .ant-tabs-tab {
+    font-size: 10px;
+  }
+  .report-numbers span {
+    text-align: center;
+    max-width: 100px;
+  }
+  .report-numbers {
+    padding-inline: 8px;
+  }
+  h1 {
+    font-size: 29px;
+  }
+  .sidebar-bottom {
+    padding-top: 30px;
+  }
+  .sidebar-note {
+    margin-bottom: 20px;
+  }
+}
+@media (max-width: 700px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+    width: 236px;
+    z-index: 110;
+  }
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: #182a2255;
+    z-index: 105;
+    border: 0;
+  }
+  .main-shell {
+    margin-left: 0;
+  }
+  .mobile-menu.ant-btn {
+    display: inline-flex;
+  }
+  .topbar {
+    height: 64px;
+    padding: 0 14px;
+  }
+  .breadcrumbs {
+    gap: 7px;
+  }
+  .breadcrumbs > span:first-of-type,
+  .breadcrumb-slash {
+    display: none;
+  }
+  .breadcrumbs strong {
+    font-size: 12px;
+  }
+  .topbar .ant-select {
+    min-width: 114px !important;
+  }
+  .main-content {
+    padding: 25px 16px 20px;
+  }
+  .page-heading p {
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  .page-heading {
+    gap: 19px;
+  }
+  .eyebrow {
+    font-size: 8px;
+    letter-spacing: 1.4px;
+  }
+  h1 {
+    font-size: 29px;
+    margin-top: 8px;
+  }
+  .page-heading > .ant-space {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .page-heading .ant-btn {
+    font-size: 11px;
+    height: 35px;
+  }
+  .scope-row {
+    padding-bottom: 14px;
+    margin-top: 21px;
+  }
+  .scope-row .muted {
+    font-size: 11px;
+  }
+  .stats-grid {
+    gap: 10px;
+    margin-bottom: 21px;
+  }
+  .stat-card {
+    padding: 12px 13px;
+  }
+  .stat-icon {
+    height: 27px;
+    width: 27px;
+    font-size: 14px;
+  }
+  .stat-top {
+    font-size: 10px;
+  }
+  .stat-value {
+    font-size: 27px;
+    margin-top: 5px;
+  }
+  .stat-detail {
+    font-size: 8px;
+    margin-top: 6px;
+    padding-top: 9px;
+  }
+  .stat-value > span {
+    font-size: 9px;
+  }
+  .panel-heading {
+    padding: 18px 15px 0;
+    gap: 8px;
+  }
+  .panel-heading h2 {
+    font-size: 14px;
+  }
+  .panel-heading p {
+    font-size: 10px;
+  }
+  .panel-heading .ant-btn {
+    font-size: 10px;
+    padding-inline: 9px;
+  }
+  .student-tabs {
+    padding-inline: 15px;
+  }
+  .student-tabs .ant-tabs-tab {
+    font-size: 10px;
+  }
+  .student-tabs .ant-tabs-nav-list {
+    gap: 16px;
+  }
+  .student-tabs .ant-tabs-tab + .ant-tabs-tab {
+    margin-left: 0 !important;
+  }
+  .table-toolbar {
+    padding: 14px 15px;
+  }
+  .table-toolbar > .ant-space {
+    width: 100%;
+    gap: 8px !important;
+  }
+  .table-toolbar .ant-select {
+    min-width: 120px !important;
+  }
+  .list-panel .ant-pagination {
+    padding: 15px 13px;
+    gap: 4px;
+  }
+  .list-panel .ant-pagination-total-text {
+    width: 100%;
+    margin-bottom: 10px;
+    height: auto;
+    line-height: 1.7;
+  }
+  .list-panel .ant-pagination-options {
+    display: block !important;
+    margin-left: auto;
+  }
+  .page-footer {
+    font-size: 9px;
+    gap: 8px;
+  }
+  .page-footer > span:last-child {
+    font-size: 9px;
+  }
+  .page-footer button {
+    font-size: 9px;
+  }
+  .profile-heading h2 {
+    font-size: 19px;
+  }
+  .import-summary {
+    flex-wrap: wrap;
+  }
+  .report-paper {
+    padding: 22px 16px;
+  }
+  .report-title h2 {
+    font-size: 21px;
+  }
+  .report-numbers {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  .report-numbers > div:nth-child(2) {
+    border: 0;
+  }
+  .report-numbers span {
+    max-width: none;
+  }
+  .report-student {
+    padding: 14px;
+  }
+  .report-student dl > div {
+    grid-template-columns: 125px 1fr;
+  }
+  .report-toolbar > .ant-space {
+    gap: 8px !important;
+  }
+  .report-toolbar input {
+    max-width: 145px;
+  }
+  .report-toolbar .ant-select {
+    width: 100% !important;
+  }
+  .ant-drawer-content-wrapper {
+    max-width: 100vw;
+  }
+  .sidebar-note h4 {
+    font-size: 12px;
+  }
+  .brand {
+    font-size: 24px;
+  }
+  .brand small {
+    font-size: 10px;
+  }
+  .ant-modal .ant-space {
+    flex-wrap: wrap;
+  }
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+  body {
+    background: #fff;
+    font-size: 11px;
+  }
+  .no-print,
+  .sidebar-overlay,
+  .ant-drawer,
+  .ant-modal-root,
+  .ant-message,
+  .ant-notification {
+    display: none !important;
+  }
+  .main-shell {
+    margin: 0;
+  }
+  .main-content {
+    max-width: none;
+    padding: 0;
+  }
+  .report-paper {
+    border: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .report-title h2 {
+    font-size: 22px;
+  }
+  .report-title p {
+    font-size: 11px;
+  }
+  .report-title .eyebrow {
+    font-size: 9px;
+  }
+  .report-numbers {
+    margin: 20px 0;
+    padding: 14px 0;
+  }
+  .report-numbers b {
+    font-size: 20px;
+  }
+  .report-numbers span {
+    font-size: 10px;
+  }
+  .report-paper h3 {
+    font-size: 15px;
+  }
+  .report-paper p {
+    font-size: 11px;
+  }
+  .report-students {
+    display: block;
+  }
+  .report-student {
+    margin-top: 12px;
+    break-inside: avoid;
+    padding: 14px;
+  }
+  .report-student dl {
+    font-size: 11px;
+  }
+  .report-student dl > div {
+    grid-template-columns: 190px 1fr;
+  }
+  .report-student dt,
+  .report-student dd {
+    color: #333;
+  }
+  .report-table-wrap {
+    overflow: visible;
+  }
+  .report-table {
+    table-layout: fixed;
+    font-size: 10px;
+  }
+  .report-table th,
+  .report-table td {
+    padding: 7px;
+  }
+  .report-table thead {
+    display: table-header-group;
+  }
+  .report-table tr {
+    break-inside: avoid;
+  }
+  .report-numbers > div {
+    break-inside: avoid;
+  }
+  .report-paper h3 {
+    break-after: avoid;
+  }
+}
+.school-logo {
+  border-radius: 50%;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.brand {
+  font-size: 23px;
+  padding-inline: 7px;
+  gap: 9px;
+}
+.brand small {
+  font-size: 7px;
+  letter-spacing: 0.35px;
+  line-height: 1.6;
+}
+@media (max-width: 1000px) {
+  .brand {
+    font-size: 19px;
+    padding-inline: 4px;
+    gap: 6px;
+  }
+  .school-logo {
+    width: 37px;
+    height: 37px;
+  }
+  .brand small {
+    font-size: 6px;
+  }
+}
+@media (max-width: 700px) {
+  .brand {
+    font-size: 23px;
+  }
+  .school-logo {
+    width: 48px;
+    height: 48px;
+  }
+  .brand small {
+    font-size: 7px;
+  }
+}
+.app-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  color: #5b7750;
+  background: #f6f7f3;
+}
+.stat-top {
+  font-size: 12px;
+}
+.stat-detail {
+  font-size: 11px;
+}
+.list-panel .ant-table-thead > tr > th {
+  font-size: 10px;
+}
+.unfilled {
+  font-size: 12px;
+}
+.panel-heading p,
+.page-heading p {
+  font-size: 12px;
+}
+.page-footer {
+  font-size: 11px;
+}
+.stat-card {
+  min-height: 145px;
+}
+@media (max-width: 700px) {
+  .stat-top {
+    font-size: 11px;
+  }
+  .stat-detail {
+    font-size: 9px;
+  }
+  .stat-card {
+    min-height: 130px;
+  }
+  .page-footer {
+    font-size: 10px;
+  }
+  .panel-heading {
+    flex-wrap: wrap;
+  }
+  .page-heading > .ant-space {
+    justify-content: flex-start;
+  }
+}
+.report-school {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+.report-school img {
+  object-fit: contain;
+  border-radius: 50%;
+}
+.report-school span {
+  font-size: 10px;
+  color: #8a977f;
+  line-height: 1.9;
+  text-align: left;
+  letter-spacing: 0.5px;
+}
+.report-school strong {
+  font-weight: 600;
+  font-size: 11px;
+  color: #5b6f4c;
+}
+.config-page .scope-row,
+.config-page .stats-grid {
+  display: none;
+}
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-top: 30px;
+}
+.config-card > .ant-form {
+  padding: 24px;
+}
+.config-card .config-help {
+  margin: 0 24px 24px;
+  padding: 15px 18px;
+  background: #f1f5ed;
+  border-radius: 7px;
+  color: #8b997c;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.config-card .ant-table-wrapper {
+  margin-top: 23px;
+}
+.config-card .panel-heading p {
+  font-size: 12px;
+}
+.teacher-profile strong {
+  display: block;
+  max-width: 125px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-note {
+  margin-bottom: 18px;
+}
+.sidebar-bottom {
+  padding-top: 25px;
+}
+:root {
+  --canvas: #f2f4ed;
+  --ink: #28392a;
+  --muted: #7f8a77;
+  --green: #315b35;
+  --line: #dfe5d7;
+  --sidebar: #233e29;
+}
+.sidebar {
+  background: linear-gradient(160deg, #29472d 0%, #1e3523 100%);
+  border-right: 1px solid #1b3220;
+}
+.brand {
+  color: #fff;
+}
+.brand small {
+  color: #c2cfb3;
+  font-size: 7px;
+}
+.school-logo {
+  border: 2px solid #e5dcc1;
+  background: #fff;
+}
+.workspace-label {
+  color: #9cb493;
+  letter-spacing: 1.5px;
+}
+.nav-item {
+  color: #c3d0b9;
+}
+.nav-item:hover {
+  background: #34573a;
+  color: #fff;
+}
+.nav-item.active {
+  background: #416142;
+  color: #fff;
+}
+.nav-item.active:before {
+  background: #c84742;
+  height: 28px;
+  width: 4px;
+}
+.nav-count {
+  background: #5c7952;
+  color: #eef5e6;
+}
+.sidebar-note {
+  background: #2e4b31;
+  border-color: #46613c;
+}
+.sidebar-note:after {
+  border-color: #3b5935;
+}
+.sidebar-note h4 {
+  color: #f1e4b9;
+}
+.sidebar-note p {
+  color: #bdcbae;
+}
+.sidebar-note .note-icon {
+  color: #c9b77b;
+}
+.sidebar-note button {
+  color: #d6c68b;
+}
+.teacher-profile {
+  border-top-color: #3c5838;
+}
+.teacher-profile strong {
+  color: #e7eddf;
+}
+.teacher-profile small {
+  color: #a1b295;
+}
+.settings-link {
+  color: #bcccb2;
+}
+.online-dot {
+  background: #a8be7b;
+}
+.topbar {
+  border-top: 3px solid #a73533;
+  background: #fff;
+  height: 80px;
+}
+.breadcrumbs {
+  color: #829176;
+}
+.breadcrumbs strong {
+  color: #385634;
+}
+.topbar .ant-select {
+  color: #385634;
+}
+.main-content {
+  padding-top: 30px;
+}
+.eyebrow {
+  color: #7e8d6c;
+}
+.heading-dot {
+  color: #b33435;
+}
+.page-heading h1 {
+  color: #2b462d;
+}
+.page-heading .ant-btn-primary {
+  background: #315b35;
+  border-color: #315b35;
+}
+.page-heading .ant-btn-primary:hover {
+  background: #416f41 !important;
+  border-color: #416f41 !important;
+}
+.scope-row .source-pill {
+  color: #8a694f;
+}
+.scope-row .source-pill > span {
+  background: #b83e36;
+}
+.stat-card {
+  border-color: #dce3d2;
+  border-top: 3px solid #6d8151;
+  border-radius: 8px;
+}
+.stat-card:nth-child(2) {
+  border-top-color: #a23c39;
+}
+.stat-card:nth-child(3) {
+  border-top-color: #a58e54;
+}
+.stat-card:nth-child(4) {
+  border-top-color: #4f7050;
+}
+.stat-icon.green {
+  background: #e9efdf;
+  color: #597441;
+}
+.stat-icon.blue {
+  background: #f5e9e4;
+  color: #a26050;
+}
+.stat-icon.ochre {
+  background: #f4eedf;
+  color: #9c854e;
+}
+.stat-icon.purple {
+  background: #e8eee2;
+  color: #668354;
+}
+.stat-value {
+  color: #2b472c;
+}
+.list-panel {
+  border-color: #dce3d3;
+}
+.list-panel .ant-table-thead > tr > th {
+  background: #eaf0e1 !important;
+  color: #61744d !important;
+  border-top-color: #dee6d2 !important;
+}
+.list-panel .ant-table-tbody > tr:hover > td {
+  background: #f4f7ef !important;
+}
+.list-panel .ant-table-cell-fix-right {
+  background: #fdfefb !important;
+}
+.count-pill {
+  background: #e8efde;
+  color: #61764b;
+}
+.class-name-button {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border: 0;
+  padding: 0;
+  background: none;
+  text-align: left;
+  color: #355737;
+}
+.class-name-button strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.class-name-button small {
+  display: block;
+  color: #879775;
+  font-size: 11px;
+  margin-top: 5px;
+}
+.class-name-button:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.class-table-icon {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #edf2e5;
+  border: 1px solid #d8e3cb;
+  color: #66894e;
+  font-size: 20px;
+}
+.class-count {
+  font-size: 19px;
+  font-weight: 600;
+  color: #365534;
+}
+.class-count small {
+  font-size: 10px;
+  font-weight: 400;
+  color: #99a18d;
+}
+.class-metric {
+  font-size: 12px;
+  color: #6b7f58;
+}
+.class-progress {
+  max-width: 145px;
+}
+.class-progress > span {
+  font-size: 10px;
+  color: #7f8c70;
+}
+.class-progress .ant-progress {
+  margin: 2px 0 0;
+}
+.class-table-panel .ant-table-tbody > tr > td {
+  padding-block: 23px;
+}
+.class-table-panel .open-class-button {
+  font-size: 11px;
+  color: #44653a;
+  border-color: #d9e2cd;
+  background: #f7f9f3;
+}
+.class-table-caption {
+  font-size: 11px;
+  color: #829572;
+}
+.class-table-footer {
+  padding: 18px 24px;
+  font-size: 11px;
+  color: #8d9a7c;
+  background: #f9faf6;
+  border-top: 1px solid #e7ecdf;
+}
+.panel-heading h2 {
+  color: #3b5331;
+}
+.report-school span {
+  color: #657f4f;
+}
+.report-school strong {
+  color: #385a32;
+}
+.report-title h2 {
+  color: #355631;
+}
+.report-school small {
+  display: block;
+  color: #b33435;
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 3px;
+}
+.report-numbers b {
+  color: #385d34;
+}
+.coverage-list .ant-progress-bg {
+  background: #6d8b50 !important;
+}
+.config-card .panel-heading {
+  padding-top: 24px;
+}
+.sidebar-bottom {
+  padding-top: 30px;
+}
+.sidebar-note {
+  margin-bottom: 17px;
+}
+.teacher-profile {
+  padding-block: 18px;
+}
+.settings-link {
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+}
+.sidebar .nav-item {
+  padding-block: 12px;
+}
+.sidebar .workspace-label {
+  margin-top: 37px;
+}
+@media (max-width: 700px) {
+  .topbar {
+    height: 64px;
+  }
+  .breadcrumbs strong {
+    font-size: 11px;
+  }
+  .class-table-caption {
+    display: none;
+  }
+  .class-table-footer {
+    font-size: 10px;
+    line-height: 1.8;
+    padding-inline: 16px;
+  }
+  .main-content {
+    padding-top: 23px;
+  }
+  .brand small {
+    font-size: 7px;
+  }
+  .sidebar-bottom {
+    padding-top: 20px;
+  }
+}
+@media print {
+  .report-title h2,
+  .report-school strong,
+  .report-school span,
+  .report-school small {
+    color: #222;
+  }
+  .school-logo {
+    border: 0;
+  }
+}
+/* Compact dashboard */
+.topbar {
+  height: 64px;
+  padding-inline: 28px;
+}
+.main-content {
+  padding: 24px 28px 18px;
+}
+.page-heading {
+  align-items: center;
+  gap: 15px;
+}
+.page-heading .eyebrow {
+  display: none;
+}
+.page-heading h1 {
+  font-size: 27px;
+  line-height: 1.3;
+  margin-top: 0;
+  letter-spacing: -0.8px;
+}
+.page-heading p {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.page-heading .ant-btn {
+  height: 35px;
+  font-size: 12px;
+  padding-inline: 13px;
+}
+.page-heading > .ant-space {
+  padding-top: 0;
+}
+.scope-row {
+  margin-top: 20px;
+  padding-bottom: 16px;
+}
+.scope-row .ant-select {
+  min-width: 125px;
+}
+.class-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+}
+.stats-grid {
+  gap: 13px;
+  margin-bottom: 21px;
+}
+.stat-card {
+  position: relative;
+  min-height: 0;
+  padding: 12px 16px;
+  border: 1px solid #dfe5d7;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.stat-card:nth-child(n) {
+  border-top: 1px solid #dfe5d7;
+}
+.stat-top {
+  font-size: 11px;
+  line-height: 18px;
+  height: 18px;
+  padding-right: 25px;
+  color: #7d8974;
+}
+.stat-icon {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  font-size: 14px;
+}
+.stat-value {
+  font-size: 26px;
+  line-height: 33px;
+  letter-spacing: -0.5px;
+  margin-top: 3px;
+}
+.stat-value > span {
+  font-size: 10px;
+  margin-left: 6px;
+}
+.stat-detail {
+  border: 0;
+  padding-top: 0;
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 15px;
+  color: #9aa38d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stat-icon.green,
+.stat-icon.blue,
+.stat-icon.purple {
+  background: #edf2e6;
+  color: #71895a;
+}
+.stat-icon.ochre {
+  background: #f4efdf;
+  color: #a18c55;
+}
+.panel-heading {
+  padding: 19px 20px 0;
+}
+.panel-heading h2 {
+  font-size: 15px;
+}
+.panel-heading p {
+  font-size: 11px;
+  margin-top: 5px;
+}
+.table-toolbar {
+  padding: 15px 20px;
+  gap: 12px;
+}
+.student-search {
+  max-width: 310px;
+}
+.class-table-panel .ant-table-tbody > tr > td {
+  padding-block: 18px;
+}
+.class-table-icon {
+  width: 36px;
+  height: 36px;
+  font-size: 17px;
+}
+.class-name-button {
+  gap: 11px;
+}
+.class-name-button strong {
+  font-size: 14px;
+}
+.class-name-button small {
+  font-size: 10px;
+  margin-top: 4px;
+}
+.class-count {
+  font-size: 18px;
+}
+.class-table-footer {
+  padding: 14px 20px;
+  font-size: 10px;
+}
+.class-progress {
+  max-width: 130px;
+}
+.class-progress > span {
+  font-size: 10px;
+}
+.page-footer {
+  margin-top: 15px;
+  font-size: 10px;
+}
+.sidebar {
+  padding-top: 25px;
+}
+.brand {
+  font-size: 21px;
+}
+.school-logo {
+  width: 43px;
+  height: 43px;
+}
+.sidebar .workspace-label {
+  margin-top: 32px;
+  margin-bottom: 13px;
+}
+.sidebar .nav-item {
+  padding-block: 11px;
+  margin-bottom: 5px;
+}
+.sidebar-note {
+  padding: 16px;
+  margin-bottom: 17px;
+}
+.sidebar-note h4 {
+  margin-top: 8px;
+}
+.sidebar-note p {
+  line-height: 1.7;
+}
+.sidebar-note button {
+  margin-top: 11px;
+}
+.sidebar-bottom {
+  padding-top: 20px;
+}
+.teacher-profile {
+  padding-block: 17px;
+}
+.student-tabs {
+  margin-top: 7px;
+}
+.student-tabs .ant-tabs-tab {
+  padding-block: 14px;
+}
+.list-panel .ant-table-thead > tr > th {
+  padding-block: 12px !important;
+}
+.config-grid {
+  margin-top: 24px;
+}
+.report-paper {
+  padding: 30px;
+}
+@media (min-width: 1600px) {
+  .main-content {
+    padding: 28px 34px 20px;
+  }
+  .stat-card {
+    padding: 14px 18px;
+  }
+  .stat-value {
+    font-size: 28px;
+  }
+  .stat-detail {
+    font-size: 11px;
+  }
+  .class-table-panel .ant-table-tbody > tr > td {
+    padding-block: 20px;
+  }
+}
+@media (max-width: 1000px) {
+  .topbar {
+    padding-inline: 20px;
+  }
+  .main-content {
+    padding: 22px 20px 18px;
+  }
+  .stats-grid {
+    gap: 11px;
+  }
+  .page-heading {
+    align-items: flex-start;
+  }
+  .page-heading h1 {
+    font-size: 26px;
+  }
+  .stat-card {
+    padding: 11px 15px;
+  }
+  .stat-top {
+    font-size: 11px;
+  }
+  .stat-detail {
+    font-size: 10px;
+  }
+  .page-heading > .ant-space {
+    padding-top: 0;
+  }
+  .sidebar .school-logo {
+    width: 37px;
+    height: 37px;
+  }
+  .brand {
+    font-size: 19px;
+  }
+  .brand small {
+    font-size: 6px;
+  }
+  .sidebar-note {
+    padding: 13px;
+  }
+  .sidebar-note p {
+    font-size: 10px;
+  }
+}
+@media (max-width: 700px) {
+  .topbar {
+    height: 59px;
+    padding-inline: 12px;
+  }
+  .main-content {
+    padding: 20px 14px 16px;
+  }
+  .page-heading {
+    gap: 14px;
+  }
+  .page-heading h1 {
+    font-size: 25px;
+  }
+  .page-heading p {
+    font-size: 11px;
+    max-width: 300px;
+  }
+  .page-heading .ant-btn {
+    height: 33px;
+    padding-inline: 11px;
+    font-size: 11px;
+  }
+  .page-heading > .ant-space {
+    width: 100%;
+    gap: 8px !important;
+  }
+  .scope-row {
+    margin-top: 16px;
+    padding-bottom: 13px;
+  }
+  .stats-grid {
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .stat-card {
+    padding: 10px 12px;
+  }
+  .stat-icon {
+    right: 11px;
+    top: 11px;
+    width: 25px;
+    height: 25px;
+    font-size: 13px;
+  }
+  .stat-top {
+    font-size: 10px;
+    line-height: 17px;
+    height: 17px;
+  }
+  .stat-value {
+    font-size: 25px;
+    line-height: 31px;
+    margin-top: 2px;
+  }
+  .stat-value > span {
+    font-size: 9px;
+  }
+  .stat-detail {
+    font-size: 9px;
+    line-height: 13px;
+    margin-top: 1px;
+  }
+  .panel-heading {
+    padding: 16px 14px 0;
+    gap: 10px;
+  }
+  .panel-heading h2 {
+    font-size: 14px;
+  }
+  .panel-heading p {
+    font-size: 10px;
+    line-height: 1.6;
+  }
+  .table-toolbar {
+    padding: 13px 14px;
+  }
+  .class-table-footer {
+    padding: 12px 14px;
+    font-size: 10px;
+  }
+  .page-footer {
+    font-size: 9px;
+    margin-top: 12px;
+  }
+  .sidebar .school-logo {
+    width: 43px;
+    height: 43px;
+  }
+  .sidebar .brand {
+    font-size: 22px;
+  }
+  .sidebar .brand small {
+    font-size: 7px;
+  }
+  .report-paper {
+    padding: 22px 15px;
+  }
+  .config-card > .ant-form {
+    padding: 18px;
+  }
+}
+@media print {
+  .main-content {
+    padding: 0;
+  }
+  .report-paper {
+    padding: 0;
+  }
+}
+.pending-enrollment-button {
+  border-color: #e2d5b8 !important;
+  color: #91723f !important;
+  background: #fcfaf3 !important;
+  white-space: nowrap;
+}
+.pending-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 19px;
+  background: #f4e9d0;
+  border-radius: 4px;
+  font-size: 10px;
+  margin-left: 3px;
+}
+.pending-detail p {
+  font-size: 12px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  margin-top: 10px;
+}
+.pending-detail strong {
+  color: #60794d;
+}
+.ant-modal .table-toolbar {
+  padding-inline: 0;
+}
+@media (max-width: 1000px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+    width: 236px;
+    z-index: 110;
+  }
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: #172c2055;
+    z-index: 105;
+    border: 0;
+  }
+  .main-shell {
+    margin-left: 0;
+  }
+  .mobile-menu.ant-btn {
+    display: inline-flex;
+  }
+  .sidebar .brand {
+    font-size: 22px;
+  }
+  .sidebar .school-logo {
+    width: 43px;
+    height: 43px;
+  }
+  .sidebar .brand small {
+    font-size: 7px;
+  }
+  .sidebar .workspace-label {
+    font-size: 9px;
+  }
+  .sidebar .nav-item {
+    font-size: 13px;
+  }
+  .class-table-panel .open-class-button {
+    font-size: 11px;
+  }
+}
+@media (min-width: 701px) and (max-width: 1000px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .page-heading {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  .page-heading > .ant-space {
+    flex-shrink: 0;
+  }
+  .page-heading h1 {
+    font-size: 25px;
+  }
+  .page-heading .ant-btn {
+    font-size: 11px;
+    padding-inline: 11px;
+  }
+  .topbar .breadcrumbs {
+    gap: 10px;
+  }
+  .page-heading p {
+    font-size: 11px;
+  }
+}

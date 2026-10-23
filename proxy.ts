@@ -1,0 +1,20 @@
+import { type NextRequest } from "next/server";
+import { updateSession } from "@/utils/supabase/middleware";
+export async function proxy(request: NextRequest) {
+  const response = await updateSession(request);
+  if (
+    request.nextUrl.pathname.startsWith("/api/") ||
+    request.nextUrl.pathname === "/" ||
+    request.nextUrl.pathname === "/login"
+  )
+    response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "same-origin");
+  response.headers.set("X-Frame-Options", "DENY");
+  return response;
+}
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};
