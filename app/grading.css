@@ -1,0 +1,242 @@
+.grade-manager {
+  min-width: 0;
+}
+.grade-tabs > .ant-tabs-nav {
+  padding: 0 20px;
+}
+.grade-manager .grade-score-cell {
+  min-width: 75px;
+  border-bottom: 1px dashed #a7b79e;
+}
+.grade-score-cell strong {
+  color: #315b35;
+  font-size: 17px;
+}
+.grade-score-cell small {
+  font-size: 12px;
+  margin-left: 4px;
+  color: #62705f;
+}
+.exam-scoring-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+.exam-scoring-grid section {
+  padding: 14px;
+  border: 1px solid #dce4d7;
+  background: #fafcf8;
+  min-width: 0;
+}
+.exam-scoring-grid h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: #315b35;
+}
+.exam-scoring-grid label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0;
+}
+.exam-scoring-grid .ant-select {
+  width: 100%;
+}
+.exam-scoring-grid .ant-input-number {
+  width: 100px;
+  flex: 0 0 100px;
+}
+.exam-scoring-grid .tf-scale {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.exam-scoring-grid .tf-scale label {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0;
+}
+.capture-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.capture-qr .ant-alert {
+  align-self: stretch;
+}
+.scan-review-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 24px;
+}
+.scan-review-grid section {
+  min-width: 0;
+}
+.scan-image {
+  position: relative;
+  border: 1px solid #cfd9c8;
+  background: #f6f7f3;
+}
+.scan-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.scan-image.is-aligning {
+  cursor: crosshair;
+}
+.scan-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  background: #b33435;
+  color: white;
+  border: 2px solid white;
+  font-weight: 700;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.scan-answer-section > .ant-alert,
+.scan-answer-section > .ant-collapse {
+  margin-bottom: 14px;
+}
+.scan-warnings {
+  max-height: 220px;
+  overflow-y: auto;
+  padding-left: 20px;
+  line-height: 1.8;
+}
+.grading-field {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0;
+  font-weight: 600;
+}
+.scan-score-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #d7e2ce;
+  padding: 14px;
+  margin: 16px 0;
+  background: #f2f7ed;
+  gap: 14px;
+}
+.scan-score-preview strong {
+  color: #315b35;
+  font-size: 24px;
+  white-space: nowrap;
+}
+.paper-capture {
+  min-height: 100vh;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 25px 20px 40px;
+  background: #f7f9f4;
+  color: #28392a;
+  border-top: 4px solid #b33435;
+}
+.capture-brand {
+  color: #315b35;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+.paper-capture h1 {
+  font-size: 28px;
+  margin: 12px 0;
+}
+.paper-capture p {
+  line-height: 1.7;
+  font-size: 14px;
+}
+.capture-session {
+  margin: 22px 0;
+  padding: 16px;
+  border: 1px solid #d7e1d1;
+  background: white;
+}
+.capture-session h2 {
+  font-size: 19px;
+  margin: 0 0 8px;
+}
+.capture-tips {
+  padding-left: 22px;
+  line-height: 1.8;
+  margin: 20px 0;
+}
+.capture-preview {
+  margin: 18px 0;
+}
+.capture-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.paper-capture .ant-btn {
+  min-height: 48px;
+}
+.capture-sent {
+  color: #315b35;
+  text-align: center;
+  font-weight: 600;
+}
+.sheet-print-toolbar {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.sheet-print-toolbar h1 {
+  font-size: 24px;
+}
+.answer-sheet {
+  max-width: 1000px;
+  margin: 20px auto;
+  background: white;
+  border: 1px solid #e0e5dc;
+}
+.answer-sheet svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+@media (max-width: 800px) {
+  .exam-scoring-grid,
+  .scan-review-grid {
+    grid-template-columns: 1fr;
+  }
+  .grade-tabs > .ant-tabs-nav {
+    padding: 0 12px;
+  }
+  .scan-score-preview {
+    flex-wrap: wrap;
+  }
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+  .printable-sheets .no-print {
+    display: none !important;
+  }
+  .answer-sheet {
+    margin: 0 auto;
+    width: 194mm;
+    border: 0;
+    break-inside: avoid;
+    break-after: page;
+  }
+  .answer-sheet:last-child {
+    break-after: auto;
+  }
+  .answer-sheet svg {
+    width: 100%;
+    max-height: 280mm;
+  }
+}

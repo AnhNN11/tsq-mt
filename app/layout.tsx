@@ -6,6 +6,7 @@ import "./globals.css";
 import "./dashboard.css";
 import "./assessment-table.css";
 import "./refined.css";
+import "./grading.css";
 
 export const metadata: Metadata = {
   title: "Mầm Xanh · Khoa Tin học và Ngoại ngữ",

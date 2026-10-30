@@ -1,7 +1,12 @@
 import "server-only";
 import { createClient } from "@/utils/supabase/server";
 import { parseWorkspace, type Workspace } from "./model";
-export async function readWorkspace() {
+export async function readWorkspace(): Promise<{
+  data: Workspace;
+  revision: number;
+  updatedAt: string;
+  updatedBy: string;
+}> {
   const supabase = await createClient();
   const { data: result, error } = await supabase.rpc("school_read_workspace");
   if (error)
@@ -10,7 +15,12 @@ export async function readWorkspace() {
     );
   const data = parseWorkspace(result?.data);
   if (!data) throw new Error("Dữ liệu Supabase chưa hợp lệ.");
-  return { ...result, data, revision: Number(result.revision) };
+  return {
+    data,
+    revision: Number(result.revision),
+    updatedAt: result.updatedAt ?? "",
+    updatedBy: result.updatedBy ?? "",
+  };
 }
 export async function writeWorkspace(data: Workspace, revision: number) {
   const supabase = await createClient();
@@ -18,7 +28,7 @@ export async function writeWorkspace(data: Workspace, revision: number) {
     p_data: data,
     p_revision: revision,
   });
-  if (error?.code === "40001") return null;
+  if (["40001", "PT409"].includes(error?.code ?? "")) return null;
   if (error)
     throw new Error(
       error.code === "42501"

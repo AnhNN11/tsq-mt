@@ -39,6 +39,7 @@ import {
   SettingOutlined,
   StarOutlined,
   TeamOutlined,
+  SolutionOutlined,
 } from "@ant-design/icons";
 import {
   assessmentOf,
@@ -80,11 +81,13 @@ import { exportExcel } from "@/lib/excel-export";
 import { academicLabel, academicTag } from "@/lib/academic-tags";
 import StatusBadge from "./status-badge";
 import { studentDataIssues } from "@/lib/data-quality";
+import GradeManager from "./grade-manager";
 
 type View =
   | "overview"
   | "students"
   | "assessments"
+  | "grades"
   | "talents"
   | "lessons"
   | "reports"
@@ -93,6 +96,7 @@ const labels: Record<View, string> = {
   overview: "Tổng quan quản lý",
   students: "Quản lý lớp và học sinh",
   assessments: "Quản lý học lực",
+  grades: "Quản lý điểm",
   talents: "Quản lý năng khiếu",
   lessons: "Quản lý giảng dạy",
   reports: "Báo cáo và thống kê",
@@ -262,6 +266,7 @@ export default function WorkspaceDashboard() {
     { key: "overview", icon: <HomeOutlined aria-hidden /> },
     { key: "students", icon: <TeamOutlined aria-hidden /> },
     { key: "assessments", icon: <CheckCircleOutlined aria-hidden /> },
+    { key: "grades", icon: <SolutionOutlined aria-hidden /> },
     { key: "talents", icon: <StarOutlined aria-hidden /> },
     { key: "lessons", icon: <BookOutlined aria-hidden /> },
     { key: "reports", icon: <BarChartOutlined aria-hidden /> },
@@ -389,15 +394,17 @@ export default function WorkspaceDashboard() {
                   ? `${data.classes.length} lớp · ${data.students.length} hồ sơ học sinh · Một không gian quản lý chung`
                   : view === "assessments"
                     ? "Theo dõi học lực đầu vào, tiến bộ và tương tác theo môn học."
-                    : view === "talents"
-                      ? "Gắn thẻ năng khiếu và ghi nhận hướng bồi dưỡng cho từng học sinh."
-                      : view === "reports"
-                        ? "Chọn phạm vi, xem trước và xuất báo cáo để chia sẻ."
-                        : view === "settings"
-                          ? "Tài khoản, năm học và sao lưu dữ liệu dùng chung."
-                          : view === "students"
-                            ? "Quản lý lớp và hồ sơ trong cùng một bảng làm việc."
-                            : "Ghi nhận bài học và số tiết đã dạy theo lớp, theo môn."}
+                    : view === "grades"
+                      ? "Bảng điểm theo học kỳ, chụp phiếu trả lời và duyệt kết quả chấm."
+                      : view === "talents"
+                        ? "Gắn thẻ năng khiếu và ghi nhận hướng bồi dưỡng cho từng học sinh."
+                        : view === "reports"
+                          ? "Chọn phạm vi, xem trước và xuất báo cáo để chia sẻ."
+                          : view === "settings"
+                            ? "Tài khoản, năm học và sao lưu dữ liệu dùng chung."
+                            : view === "students"
+                              ? "Quản lý lớp và hồ sơ trong cùng một bảng làm việc."
+                              : "Ghi nhận bài học và số tiết đã dạy theo lớp, theo môn."}
               </p>
             </div>
             <Space wrap>
@@ -959,6 +966,14 @@ export default function WorkspaceDashboard() {
                   }
                   onExport={(rows) => void exportXlsx(rows)}
                   exportBusy={exportBusy}
+                />
+              )}
+              {view === "grades" && (
+                <GradeManager
+                  data={data}
+                  students={students}
+                  subject={subject}
+                  className={className}
                 />
               )}
               {view === "talents" && (

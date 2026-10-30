@@ -6,7 +6,7 @@ export function createAdminClient() {
     process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key)
     throw new Error(
-      "Cần cấu hình SUPABASE_SECRET_KEY trên máy chủ để quản lý tài khoản.",
+      "Cần cấu hình SUPABASE_SECRET_KEY trên máy chủ để quản lý tài khoản và bảng điểm.",
     );
   return createClient(supabaseConfig().url, key, {
     auth: { persistSession: false, autoRefreshToken: false },

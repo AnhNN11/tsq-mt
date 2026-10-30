@@ -36,7 +36,7 @@ npm install
 npm run dev
 ```
 
-Tạo `.env.local` theo `.env.example`. Secret key cần cho CRUD tài khoản; nếu chỉ có hai public biến thì đăng nhập và dữ liệu nghiệp vụ vẫn chạy, nhưng thao tác quản lý tài khoản báo thiếu cấu hình. Các biến cấu hình cho ứng dụng:
+Tạo `.env.local` theo `.env.example`. Server secret key cần cho quản lý tài khoản và toàn bộ luồng bảng điểm, phiên chụp, xử lý ảnh. Các biến cấu hình cho ứng dụng:
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=your_project_url
@@ -52,7 +52,25 @@ Tài khoản được tạo và quản lý tại Quản trị hệ thống → T
 2. Thêm `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` và `SUPABASE_SECRET_KEY` vào Environment Variables cho Production và Preview cần sử dụng.
 3. Giữ lệnh build `npm run build` và output mặc định của Next.js, rồi Deploy.
 
-Dự án Supabase hiện tại đã được tạo bảng, cấp tài khoản và nhập dữ liệu. Vercel sử dụng trực tiếp kho dữ liệu đó; **không cần chạy lại seed hoặc đưa mật khẩu tài khoản lên GitHub**. Serverless không cần ổ đĩa ghi dữ liệu. `SUPABASE_SECRET_KEY` chỉ dùng phía server cho chức năng admin tạo/sửa/ngừng sử dụng tài khoản; không dùng biến NEXT_PUBLIC cho khóa này.
+Dự án Supabase hiện tại đã được tạo bảng, cấp tài khoản và nhập dữ liệu, gồm migration bảng điểm `202610300006` đến `202610300009`. Vercel sử dụng trực tiếp kho dữ liệu đó; **không cần chạy lại seed hoặc đưa mật khẩu tài khoản lên GitHub**. Serverless không cần ổ đĩa ghi dữ liệu. `SUPABASE_SECRET_KEY` chỉ dùng phía server; không dùng biến NEXT_PUBLIC cho khóa này.
+
+## Bảng điểm và chấm phiếu từ điện thoại
+
+Vào **Quản lý điểm**, chọn lớp, môn, năm học và học kỳ. Tạo bài kiểm tra, chọn loại điểm, trọng số, số câu và thang điểm; nhập đủ đáp án cho từng mã đề bốn chữ số. Có thể dán nhanh đáp án theo hướng dẫn trong hộp thoại. Mẫu hỗ trợ tối đa 40 câu chọn A–D, 8 câu đúng/sai (mỗi câu bốn ý) và 6 câu trả lời ngắn dạng số (mỗi đáp án bốn ô, tính cả dấu âm/dấu phẩy). Điểm đúng/sai có thể tính từng ý hoặc theo số ý đúng trong câu. Cho phép cấu hình sai số số học và tổng điểm tới 100.
+
+Trong **Bài làm → Danh sách dự thi**, kiểm tra số báo danh tám chữ số, in phiếu cá nhân hoặc phiếu trống. Phiếu in từ phần mềm có vị trí ô tô và dấu căn chỉnh tương thích bộ nhận dạng; mẫu khác cần kiểm tra riêng. Mẫu được xây dựng theo ảnh phiếu đã cung cấp, không nhận dạng mọi loại phiếu tùy ý.
+
+**Nhận bài bằng mã QR** tạo phiên 30 phút, tối đa 100 ảnh. Điện thoại quét mã, chụp/chọn ảnh, xem trước rồi gửi lên Supabase Storage riêng tư. Máy tính chọn **Xử lý ảnh chờ**, mở **Kiểm tra bài**, đối chiếu ảnh với học sinh, mã đề và các đáp án, tích xác nhận rồi **Duyệt và ghi điểm**. Chỉ thao tác duyệt mới ghi điểm; có cảnh báo khi thay thế điểm cũ. Ảnh mờ/tô nhiều ô không được tự đoán đáp án; giáo viên có thể căn chỉnh bốn góc, nhập lại đáp án từ ảnh hoặc chụp lại. Nhận dạng hiện đã kiểm thử bằng ảnh phiếu trống gốc và phiếu tô giả lập, xoay/nghiêng; cần thử thêm bài tô thật và điều kiện chụp thực tế trước khi dùng đại trà.
+
+Giáo viên chỉ quản lý điểm môn được phân công; admin và phó khoa quản lý cả hai môn. API tính lại điểm theo đáp án trên server, chống ghi đè phiên bản cũ và lưu lịch sử thêm/sửa/xóa. Điểm nhập trực tiếp cũng được lưu lịch sử. Lưu trữ bài kiểm tra không làm mất điểm đã duyệt; khi đã có lịch sử điểm, đáp án và thang điểm được khóa để bảo toàn kết quả.
+
+Điểm tổng hợp là trung bình có trọng số của những bài đã có điểm, quy đổi về thang 10; không coi ô trống là 0. Đây là tổng hợp nội bộ theo trọng số giáo viên cấu hình, không tự suy ra kết quả học lực pháp định. Xuất Excel theo bộ lọc học sinh đang chọn, gồm bảng điểm, chi tiết đã duyệt và cấu hình thang điểm; Times New Roman cỡ tối thiểu 14.
+
+Ảnh được đánh dấu hết hạn sau 7 ngày; dọn ảnh giữ nguyên điểm, đáp án đã duyệt và lịch sử. Có nút dọn ảnh trong bảng điểm và tự dọn khi mở phiên mới. `vercel.json` đặt lịch dọn mỗi ngày lúc 03:00 giờ Việt Nam; thêm `CRON_SECRET` bằng chuỗi ngẫu nhiên riêng vào Vercel để bật xác thực cron. Mỗi lượt cron dọn tối đa 1.000 ảnh hết hạn. Không cần đưa `CRON_SECRET` vào biến công khai.
+
+`APP_PUBLIC_URL` không bắt buộc trên Vercel: mặc định QR dùng tên miền đang truy cập. Nếu đặt, dùng tên miền HTTPS thực tế. Khi thử tại máy, chạy `npm run dev -- --hostname 0.0.0.0`, đặt biến này bằng địa chỉ IP LAN của máy và cho điện thoại cùng Wi-Fi. **Không đưa địa chỉ LAN của máy lên cấu hình Vercel.** Đường dẫn QR chỉ có quyền gửi ảnh trong thời gian phiên; không xem hồ sơ, đáp án hoặc điểm. Không chia sẻ mã ra ngoài nhóm chụp bài.
+
+Các bảng `school_exams`, `school_exam_candidates`, `school_capture_sessions`, `school_paper_scans`, `school_grades`, `school_grade_history` đều bật RLS; mutation RPC chỉ server role được gọi sau kiểm tra người dùng. Liên kết học sinh/lớp dùng ID ổn định và bản chụp tên để không mất điểm khi cập nhật hồ sơ cũ. Bản sao lưu JSON tại Quản trị hệ thống hiện chỉ gồm dữ liệu hồ sơ/đánh giá cũ, **không gồm bảng điểm hoặc ảnh bài làm**; sao lưu các bảng mới và Storage bằng công cụ Supabase riêng khi cần khôi phục toàn hệ thống.
 
 ## Khởi tạo một dự án Supabase mới
 
@@ -79,6 +97,6 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-E2E kiểm tra đăng nhập/đăng xuất, cookie HttpOnly, chặn người chưa đăng nhập, quyền API và RPC, chống ghi đè đồng thời, đánh giá học lực/năng khiếu, CRUD thẻ học lực/năng khiếu và gắn thẻ, trao đổi dữ liệu giữa tài khoản, xuất Word/Excel có biểu đồ và giao diện mobile. Các thay đổi thử nghiệm chỉ áp dụng lớp/học sinh tạm với ID `E2E-SCRATCH-*` hoặc `ACADEMIC-E2E-*`, được dọn sau kiểm tra.
+E2E kiểm tra đăng nhập/đăng xuất, cookie HttpOnly, chặn người chưa đăng nhập, quyền API và RPC, chống ghi đè đồng thời, đánh giá học lực/năng khiếu, CRUD thẻ học lực/năng khiếu và gắn thẻ, trao đổi dữ liệu giữa tài khoản, xuất Word/Excel có biểu đồ và giao diện mobile. Các thay đổi thử nghiệm chỉ áp dụng lớp/học sinh tạm với ID `E2E-SCRATCH-*`, `ACADEMIC-E2E-*` hoặc `GRADING-E2E-*`, được dọn sau kiểm tra.
 
 Tài liệu kỹ thuật: [Supabase Auth](https://supabase.com/docs/guides/auth), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Recharts](https://recharts.github.io/en-US/guide/sizes/), [docx](https://docx.js.org/), [ExcelJS](https://github.com/exceljs/exceljs).

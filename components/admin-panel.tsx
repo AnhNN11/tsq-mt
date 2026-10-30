@@ -22,7 +22,7 @@ export default function AdminPanel({ data }: { data: Workspace }) {
       if (!data) throw new Error("Bản sao lưu chưa đúng định dạng.");
       modal.confirm({
         title: "Thay thế dữ liệu chung bằng bản sao lưu?",
-        content: `Gồm ${data.students.length} học sinh. Thao tác ảnh hưởng tất cả tài khoản; hãy tải bản hiện tại trước khi khôi phục.`,
+        content: `Khôi phục hồ sơ của ${data.students.length} học sinh, đánh giá, năng khiếu, giảng dạy và cấu hình dùng chung. Bảng điểm, ảnh bài làm và tài khoản được giữ riêng trên Supabase. Hãy tải bản hồ sơ hiện tại trước khi khôi phục.`,
         okText: "Khôi phục dữ liệu chung",
         cancelText: "Hủy",
         onOk: async () => {
@@ -104,7 +104,7 @@ export default function AdminPanel({ data }: { data: Workspace }) {
                   type="success"
                   showIcon
                   title="Dữ liệu dùng chung trên Supabase"
-                  description="Học sinh, đánh giá, năng khiếu và tài khoản được quản lý tập trung trên Supabase. Tải bản sao lưu định kỳ để lưu giữ hồ sơ và đánh giá."
+                  description="Bản JSON gồm hồ sơ, đánh giá học lực, năng khiếu, giảng dạy và cấu hình. Bảng điểm, ảnh bài làm và tài khoản cần sao lưu riêng bằng công cụ Supabase khi khôi phục toàn hệ thống."
                 />
                 <Space wrap>
                   <Button

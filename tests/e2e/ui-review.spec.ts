@@ -20,6 +20,7 @@ test("all dashboard sections remain readable within desktop and mobile viewports
     "Tổng quan quản lý",
     "Quản lý lớp và học sinh",
     "Quản lý học lực",
+    "Quản lý điểm",
     "Quản lý năng khiếu",
     "Quản lý giảng dạy",
     "Báo cáo và thống kê",
