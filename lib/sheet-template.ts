@@ -1,7 +1,7 @@
 import layout from "./omr-layout.json";
 import type { BubbleGroup } from "./omr-reference";
 import type { AnswerSet } from "./grading-model";
-const groups = layout as BubbleGroup[];
+const defaultGroups = layout as BubbleGroup[];
 const escape = (value: string) =>
   value.replace(
     /[&<>"']/g,
@@ -21,6 +21,7 @@ export function sheetSvg({
   candidateNumber = "",
   variant = "",
   answers,
+  groups = defaultGroups,
 }: {
   title?: string;
   subject?: string;
@@ -28,6 +29,7 @@ export function sheetSvg({
   candidateNumber?: string;
   variant?: string;
   answers?: AnswerSet;
+  groups?: BubbleGroup[];
 } = {}) {
   const x = (n: number) => 60 + n * 900,
     y = (n: number) => 60 + n * 1300;
@@ -82,18 +84,20 @@ export function sheetSvg({
   );
   const candidate = groups.find((g) => g.key === "candidate:0")!,
     variantGroup = groups.find((g) => g.key === "variant:0")!;
-  svg += text(
-    x(candidate.points[0].x),
-    y(candidate.points[0].y) - 35,
-    "Số báo danh",
-    17,
-  );
-  svg += text(
-    x(variantGroup.points[0].x) - 5,
-    y(variantGroup.points[0].y) - 35,
-    "Mã đề",
-    17,
-  );
+  if (candidate)
+    svg += text(
+      x(candidate.points[0].x),
+      y(candidate.points[0].y) - 35,
+      "Số báo danh",
+      17,
+    );
+  if (variantGroup)
+    svg += text(
+      x(variantGroup.points[0].x) - 5,
+      y(variantGroup.points[0].y) - 35,
+      "Mã đề",
+      17,
+    );
   for (const group of groups) {
     const [part, a, b] = group.key.split(":"),
       i = Number(a),
@@ -156,7 +160,21 @@ export function sheetSvg({
   svg += text(
     510,
     1405,
-    "Mẫu phiếu 40 câu chọn đáp án · 8 câu đúng/sai · 6 câu trả lời ngắn",
+    [
+      ["multipleChoice", "câu chọn đáp án"],
+      ["trueFalse", "câu đúng/sai"],
+      ["shortAnswer", "câu trả lời ngắn"],
+    ]
+      .map(([part, label]) => {
+        const count = new Set(
+          groups
+            .filter((g) => g.key.startsWith(`${part}:`))
+            .map((g) => g.key.split(":")[1]),
+        ).size;
+        return count ? `${count} ${label}` : "";
+      })
+      .filter(Boolean)
+      .join(" · "),
     14,
     "middle",
   );

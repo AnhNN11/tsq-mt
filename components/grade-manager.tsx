@@ -3,597 +3,426 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   App,
+  Breadcrumb,
   Button,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
+  Empty,
   Popconfirm,
   Select,
   Space,
+  Steps,
   Table,
-  Tabs,
   Tag,
-  Tooltip,
 } from "antd";
 import {
+  ArrowLeftOutlined,
   CameraOutlined,
-  DeleteOutlined,
   EditOutlined,
   FileExcelOutlined,
   PlusOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
+import { useUser } from "./auth-context";
+import { canAssess } from "@/lib/access";
+import type { Student, Workspace } from "@/lib/model";
 import {
   canonicalSchoolYear,
-  EXAM_KINDS,
   maxExamScore,
   roundScore,
-  semesterAverage,
   type Exam,
   type Grade,
 } from "@/lib/grading-model";
-import type { Student, Workspace } from "@/lib/model";
+import type { PaperTemplate } from "@/lib/paper-template-model";
 import { gradingFetch } from "@/lib/grading-client";
-import ExamEditor from "./exam-editor";
-import ExamDetail from "./exam-detail";
 import { exportGradebook } from "@/lib/grade-export";
-type ExamWithHistory = Exam & { has_history?: boolean };
+import ExamEditor from "./exam-editor";
+import DirectExamDetail from "./direct-exam-detail";
+import TemplateManager from "./paper-template-manager";
+type ManagedExam = Exam & { has_history?: boolean };
 export default function GradeManager({
   data,
-  students,
-  subject,
-  className,
 }: {
   data: Workspace;
   students: Student[];
   subject: string;
   className: string;
 }) {
-  const { message } = App.useApp();
-  const [year, setYear] = useState(
-      canonicalSchoolYear(data.settings.schoolYear),
-    ),
-    [semester, setSemester] = useState(1),
-    [tab, setTab] = useState("book"),
-    [query, setQuery] = useState("");
-  const [exams, setExams] = useState<ExamWithHistory[]>([]),
+  const user = useUser(),
+    { message } = App.useApp();
+  const [classId, setClassId] = useState(""),
+    [subject, setSubject] = useState(""),
+    [exams, setExams] = useState<ManagedExam[]>([]),
     [grades, setGrades] = useState<Grade[]>([]),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState("");
-  const [editing, setEditing] = useState<ExamWithHistory | "new" | null>(null),
-    [detailId, setDetailId] = useState("");
-  const [manual, setManual] = useState<{
-      student: Student;
-      exam: Exam;
-      grade?: Grade;
-    } | null>(null),
-    [busy, setBusy] = useState(false),
-    [manualForm] = Form.useForm();
-  const [archived, setArchived] = useState(false),
-    [exportBusy, setExportBusy] = useState(false);
-  const generation = useRef(0);
-  const classId = data.classes.find((c) => c.name === className)?.id;
-  const [loadedScope, setLoadedScope] = useState("");
-  const scope = new URLSearchParams({
-    year,
-    semester: String(semester),
-    subject,
-    ...(classId ? { class_id: classId } : {}),
-  }).toString();
-  const isLoading = loading || loadedScope !== scope;
-  const refresh = useCallback(
-    (signal?: AbortSignal) => {
-      const version = ++generation.current;
-      return gradingFetch<{ exams: ExamWithHistory[]; grades: Grade[] }>(
-        `/api/grading?${scope}`,
-      )
-        .then((result) => {
-          if (signal?.aborted || version !== generation.current) return;
-          setExams(result.exams);
-          setGrades(result.grades);
-          setError("");
-        })
-        .catch((e) => {
-          if (signal?.aborted || version !== generation.current) return;
+    [templates, setTemplates] = useState<PaperTemplate[]>([]),
+    [loading, setLoading] = useState(false),
+    [error, setError] = useState(""),
+    [archived, setArchived] = useState(false),
+    [editing, setEditing] = useState<ManagedExam | "new" | null>(null),
+    [detail, setDetail] = useState(""),
+    [showTemplates, setShowTemplates] = useState(false),
+    [exporting, setExporting] = useState(false);
+  const generation = useRef(0),
+    year = canonicalSchoolYear(data.settings.schoolYear),
+    cls = data.classes.find((c) => c.id === classId);
+  const refresh = useCallback(() => {
+    if (!classId || !subject) return Promise.resolve();
+    const version = ++generation.current;
+    return Promise.all([
+      gradingFetch<{ exams: ManagedExam[]; grades: Grade[] }>(
+        `/api/grading?${new URLSearchParams({ year, subject, class_id: classId })}`,
+      ),
+      gradingFetch<{ templates: PaperTemplate[] }>(
+        `/api/grading/templates?subject=${encodeURIComponent(subject)}`,
+      ),
+    ])
+      .then(([r, t]) => {
+        if (version !== generation.current) return;
+        setExams(r.exams);
+        setGrades(r.grades);
+        setTemplates(t.templates);
+        setError("");
+      })
+      .catch((e) => {
+        if (version === generation.current) {
           setExams([]);
           setGrades([]);
+          setTemplates([]);
           setError((e as Error).message);
-        })
-        .finally(() => {
-          if (!signal?.aborted && version === generation.current) {
-            setLoading(false);
-            setLoadedScope(scope);
-          }
-        });
-    },
-    [scope, setLoadedScope],
-  );
-  useEffect(() => {
-    const controller = new AbortController();
-    void refresh(controller.signal);
-    return () => controller.abort();
-  }, [refresh]);
-  const active = exams.filter((e) => !e.archived),
-    bookExams = exams.filter(
-      (e) => !e.archived || grades.some((g) => g.exam_id === e.id),
-    ),
-    displayed = exams.filter((e) => e.archived === archived);
-  const rows = students.filter((s) =>
-    `${s.name} ${s.id}`
-      .toLocaleLowerCase("vi")
-      .includes(query.toLocaleLowerCase("vi")),
-  );
-  function openManual(student: Student, exam: Exam) {
-    const grade = grades.find(
-      (g) => g.exam_id === exam.id && g.student_id === student.id,
-    );
-    setManual({ student, exam, grade });
-    manualForm.resetFields();
-    manualForm.setFieldsValue({ score: grade?.score, note: grade?.note ?? "" });
-  }
-  async function saveManual(values: { score: number; note: string }) {
-    if (!manual) return;
-    setBusy(true);
-    try {
-      await gradingFetch("/api/grading/grades", "POST", {
-        ...values,
-        note: values.note ?? "",
-        examId: manual.exam.id,
-        studentId: manual.student.id,
-        version: manual.grade?.version ?? 0,
+        }
+      })
+      .finally(() => {
+        if (version === generation.current) setLoading(false);
       });
-      setManual(null);
-      await refresh();
-      message.success("Đã lưu điểm và lịch sử cập nhật.");
-    } catch (e) {
-      message.error((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+  }, [classId, subject, year]);
+  useEffect(() => {
+    void refresh();
+    const counter = generation;
+    return () => {
+      counter.current++;
+    };
+  }, [refresh]);
+  function chooseClass(id: string) {
+    setClassId(id);
+    setSubject("");
+    setExams([]);
+    setGrades([]);
+    setError("");
   }
-  const firstYear = Number(data.settings.schoolYear.slice(0, 4));
+  function chooseSubject(value: string) {
+    setExams([]);
+    setGrades([]);
+    setTemplates([]);
+    setSubject(value);
+    setLoading(true);
+    setError("");
+  }
+  const pupils = data.students.filter((s) => s.className === cls?.name),
+    shown = exams.filter((e) => e.archived === archived);
   return (
-    <section className="list-panel grade-manager">
-      <div className="panel-heading">
-        <div>
-          <h2>Bảng điểm học kỳ · Môn {subject}</h2>
-          <p>
-            Chấm ảnh theo đáp án từng mã đề; giáo viên duyệt trước khi ghi điểm.
-          </p>
-        </div>
-        <Space wrap>
-          <Button
-            icon={<ReloadOutlined aria-hidden />}
-            onClick={() => void refresh()}
-          >
-            Làm mới
-          </Button>
-          <Button
-            icon={<FileExcelOutlined aria-hidden />}
-            loading={exportBusy}
-            disabled={isLoading || Boolean(error)}
-            onClick={async () => {
-              setExportBusy(true);
-              try {
-                await exportGradebook({
-                  exams,
-                  grades,
-                  students: rows,
-                  classes: data.classes,
-                  subject,
-                  year,
-                  semester,
-                });
-                message.success("Đã xuất bảng điểm Excel.");
-              } catch {
-                message.error("Chưa xuất được bảng điểm.");
-              } finally {
-                setExportBusy(false);
-              }
-            }}
-          >
-            Xuất bảng điểm
-          </Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined aria-hidden />}
-            disabled={!data.classes.length}
-            onClick={() => setEditing("new")}
-          >
-            Tạo bài kiểm tra
-          </Button>
-        </Space>
-      </div>
-      <div className="table-toolbar">
-        <Select
-          aria-label="Năm học bảng điểm"
-          value={year}
-          onChange={setYear}
-          options={Array.from({ length: 8 }, (_, i) => {
-            const start = firstYear - 5 + i;
-            const value = `${start} – ${start + 1}`;
-            return { value, label: `Năm học ${value}` };
-          })}
-          style={{ minWidth: 230 }}
-        />
-        <Select
-          aria-label="Học kỳ bảng điểm"
-          value={semester}
-          onChange={setSemester}
-          options={[
-            { value: 1, label: "Học kỳ một" },
-            { value: 2, label: "Học kỳ hai" },
-          ]}
-          style={{ minWidth: 170 }}
-        />
-        <Input
-          aria-label="Tìm học sinh trong bảng điểm"
-          placeholder="Tìm tên hoặc mã học sinh…"
-          allowClear
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ maxWidth: 300 }}
-        />
-      </div>
-      {error && (
-        <Alert
-          type="error"
-          showIcon
-          title={error}
-          action={<Button onClick={() => void refresh()}>Thử lại</Button>}
-        />
-      )}
-      <Tabs
-        className="grade-tabs"
-        activeKey={tab}
-        onChange={setTab}
+    <section className="list-panel direct-exams">
+      <Steps
+        size="small"
+        current={!cls ? 0 : !subject ? 1 : 2}
         items={[
-          {
-            key: "book",
-            label: `Bảng điểm (${rows.length} học sinh)`,
-            children: (
-              <>
-                <Table<Student>
-                  rowKey="id"
-                  loading={isLoading}
-                  dataSource={rows}
-                  pagination={{
-                    pageSize: 10,
-                    showSizeChanger: true,
-                    showTotal: (total) => `${total} học sinh`,
-                  }}
-                  scroll={{ x: Math.max(850, 380 + bookExams.length * 130) }}
-                  columns={[
-                    {
-                      title: "HỌC SINH",
-                      fixed: "left",
-                      width: 220,
-                      render: (_, s) => (
-                        <span>
-                          <strong>{s.name}</strong>
-                          <small className="table-subline">
-                            Lớp {s.className}
-                          </small>
-                        </span>
-                      ),
-                    },
-                    ...bookExams.map((exam) => ({
-                      title: (
-                        <Tooltip
-                          title={`${EXAM_KINDS[exam.kind]} · Lớp ${exam.class_name} · Trọng số ${exam.weight}`}
-                        >
-                          <span>
-                            {exam.title}
-                            <small className="column-subtitle">
-                              {EXAM_KINDS[exam.kind]} · Trọng số {exam.weight}
-                            </small>
-                          </span>
-                        </Tooltip>
-                      ),
-                      key: exam.id,
-                      width: 150,
-                      render: (_: unknown, student: Student) => {
-                        if (
-                          data.classes.find((c) => c.name === student.className)
-                            ?.id !== exam.class_id
-                        )
-                          return <span className="muted">—</span>;
-                        const grade = grades.find(
-                          (g) =>
-                            g.student_id === student.id &&
-                            g.exam_id === exam.id,
-                        );
-                        return (
-                          <Button
-                            type="text"
-                            className="grade-score-cell"
-                            disabled={exam.archived}
-                            aria-label={`Điểm ${student.name} bài ${exam.title}`}
-                            onClick={() => openManual(student, exam)}
-                          >
-                            {grade ? (
-                              <>
-                                <strong>{grade.score}</strong>
-                                <small>/{grade.max_score}</small>
-                              </>
-                            ) : (
-                              <span className="unfilled">Nhập điểm</span>
-                            )}
-                          </Button>
-                        );
-                      },
-                    })),
-                    {
-                      title: "TỔNG HỢP / 10",
-                      fixed: "right",
-                      width: 145,
-                      render: (_, s) => {
-                        const cls = data.classes.find(
-                          (c) => c.name === s.className,
-                        );
-                        const summary = semesterAverage(
-                          bookExams.filter((e) => e.class_id === cls?.id),
-                          grades,
-                          s.id,
-                        );
-                        return (
-                          <span>
-                            <strong>{summary.average ?? "—"}</strong>
-                            <small className="table-subline">
-                              {summary.count}/{summary.total} bài đã có điểm
-                            </small>
-                          </span>
-                        );
-                      },
-                    },
-                  ]}
-                />
-                <p className="section-description">
-                  Điểm tổng hợp = trung bình các điểm đã có, quy về thang 10 và
-                  nhân trọng số. Bài chưa có điểm được để trống. Chọn lớp ở
-                  thanh trên để bảng gọn hơn.
-                </p>
-              </>
-            ),
-          },
-          {
-            key: "exams",
-            label: `Bài kiểm tra (${active.length})`,
-            children: (
-              <>
-                <div className="table-toolbar">
-                  <Select
-                    aria-label="Trạng thái bài kiểm tra"
-                    value={archived ? "archived" : "active"}
-                    options={[
-                      { value: "active", label: "Đang sử dụng" },
-                      { value: "archived", label: "Đã lưu trữ" },
-                    ]}
-                    onChange={(v) => setArchived(v === "archived")}
-                  />
+          { title: "Chọn lớp" },
+          { title: "Chọn môn" },
+          { title: "Bài thi và chấm điểm" },
+        ]}
+        style={{ marginBottom: 24 }}
+      />
+      {!cls ? (
+        <>
+          <h2>Chọn lớp để chấm thi</h2>
+          <Table
+            rowKey="id"
+            size="middle"
+            pagination={false}
+            dataSource={data.classes}
+            columns={[
+              {
+                title: "Lớp",
+                dataIndex: "name",
+                render: (name) => <strong>Lớp {name}</strong>,
+              },
+              {
+                title: "Sĩ số",
+                render: (_, c) =>
+                  `${data.students.filter((s) => s.className === c.name).length} học sinh`,
+              },
+              {
+                title: "Thao tác",
+                render: (_, c) => (
                   <Button
+                    type="primary"
+                    aria-label={`Chọn lớp ${c.name}`}
+                    onClick={() => chooseClass(c.id)}
+                  >
+                    Chọn lớp
+                  </Button>
+                ),
+              },
+            ]}
+          />
+        </>
+      ) : (
+        <>
+          <Breadcrumb
+            items={[
+              {
+                title: (
+                  <Button
+                    type="link"
+                    icon={<ArrowLeftOutlined aria-hidden />}
+                    onClick={() => chooseClass("")}
+                  >
+                    Các lớp
+                  </Button>
+                ),
+              },
+              { title: `Lớp ${cls.name}` },
+              ...(subject ? [{ title: subject }] : []),
+            ]}
+          />
+          <div className="exam-subjects">
+            <h2>Chọn môn của lớp {cls.name}</h2>
+            <Space wrap>
+              {["Tin học", "Tiếng Anh"]
+                .filter((s) => canAssess(user, s))
+                .map((s) => (
+                  <Button
+                    key={s}
+                    size="large"
+                    type={subject === s ? "primary" : "default"}
+                    onClick={() => chooseSubject(s)}
+                  >
+                    {s}
+                  </Button>
+                ))}
+            </Space>
+          </div>
+          {subject && (
+            <>
+              <div className="table-toolbar">
+                <div>
+                  <h2>Bài thi môn {subject}</h2>
+                  <p className="muted">
+                    Tạo tên bài thi, chọn mẫu phiếu, nhập đáp án và kết nối điện
+                    thoại để chấm từng em.
+                  </p>
+                </div>
+                <Space wrap>
+                  <Button
+                    icon={<ReloadOutlined aria-hidden />}
+                    loading={loading}
+                    onClick={() => {
+                      setLoading(true);
+                      void refresh();
+                    }}
+                  >
+                    Làm mới
+                  </Button>
+                  <Button onClick={() => setShowTemplates(true)}>
+                    Mẫu phiếu ô tô
+                  </Button>
+                  <Button
+                    icon={<FileExcelOutlined aria-hidden />}
+                    loading={exporting}
+                    disabled={!exams.length}
                     onClick={async () => {
-                      setBusy(true);
+                      setExporting(true);
                       try {
-                        const result = await gradingFetch<{ removed: number }>(
-                          "/api/grading/cleanup",
-                          "POST",
-                        );
-                        message.success(
-                          `Đã dọn ${result.removed} ảnh hết hạn; điểm đã duyệt được giữ.`,
-                        );
-                      } catch (e) {
-                        message.error((e as Error).message);
+                        await exportGradebook({
+                          exams,
+                          grades,
+                          students: pupils,
+                          classes: data.classes,
+                          year,
+                          subject,
+                        });
+                        message.success("Đã xuất bảng điểm Excel.");
+                      } catch {
+                        message.error("Chưa xuất được bảng điểm.");
                       } finally {
-                        setBusy(false);
+                        setExporting(false);
                       }
                     }}
-                    loading={busy}
                   >
-                    Dọn ảnh tạm hết hạn
+                    Xuất bảng điểm
                   </Button>
-                </div>
-                <Table<ExamWithHistory>
-                  rowKey="id"
-                  loading={isLoading}
-                  dataSource={displayed}
-                  pagination={{ pageSize: 10 }}
-                  scroll={{ x: 1000 }}
-                  columns={[
-                    {
-                      title: "BÀI KIỂM TRA",
-                      dataIndex: "title",
-                      render: (value, e) => (
-                        <Button type="link" onClick={() => setDetailId(e.id)}>
-                          {value}
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined aria-hidden />}
+                    disabled={loading || !templates.length}
+                    onClick={() => setEditing("new")}
+                  >
+                    Tạo bài thi
+                  </Button>
+                </Space>
+              </div>
+              {error && <Alert type="error" showIcon title={error} />}
+              <Select
+                aria-label="Trạng thái bài thi"
+                value={archived ? "archived" : "active"}
+                options={[
+                  { value: "active", label: "Đang sử dụng" },
+                  { value: "archived", label: "Đã lưu trữ" },
+                ]}
+                onChange={(v) => setArchived(v === "archived")}
+                style={{ minWidth: 180, margin: "0 0 16px" }}
+              />
+              <Table<ManagedExam>
+                rowKey="id"
+                size="small"
+                loading={loading}
+                dataSource={shown}
+                pagination={{ pageSize: 10 }}
+                scroll={{ x: 950 }}
+                locale={{
+                  emptyText: (
+                    <Empty description="Chưa có bài thi. Tạo bài thi theo tên và đáp án của giáo viên." />
+                  ),
+                }}
+                columns={[
+                  {
+                    title: "Bài thi",
+                    dataIndex: "title",
+                    render: (v, e) => (
+                      <Button type="link" onClick={() => setDetail(e.id)}>
+                        {v}
+                      </Button>
+                    ),
+                  },
+                  { title: "Ngày thi", dataIndex: "exam_date", width: 120 },
+                  {
+                    title: "Mẫu phiếu",
+                    render: (_, e) => e.template_name || "Mẫu đã cung cấp",
+                    width: 250,
+                  },
+                  {
+                    title: "Tiến độ",
+                    render: (_, e) => (
+                      <Tag color="green">
+                        {grades.filter((g) => g.exam_id === e.id).length}/
+                        {pupils.length} học sinh
+                      </Tag>
+                    ),
+                    width: 145,
+                  },
+                  {
+                    title: "Điểm tối đa",
+                    render: (_, e) => roundScore(maxExamScore(e.scoring)),
+                    width: 100,
+                  },
+                  {
+                    title: "Thao tác",
+                    width: 290,
+                    render: (_, e) => (
+                      <Space wrap>
+                        <Button
+                          icon={<CameraOutlined aria-hidden />}
+                          size="small"
+                          type="primary"
+                          onClick={() => setDetail(e.id)}
+                        >
+                          {e.archived ? "Xem điểm" : "Chấm thi"}
                         </Button>
-                      ),
-                    },
-                    {
-                      title: "LỚP",
-                      render: (_, e) =>
-                        data.classes.find((c) => c.id === e.class_id)?.name ??
-                        e.class_name,
-                    },
-                    {
-                      title: "LOẠI ĐIỂM",
-                      render: (_, e) => EXAM_KINDS[e.kind],
-                    },
-                    { title: "NGÀY", dataIndex: "exam_date" },
-                    {
-                      title: "MÃ ĐỀ",
-                      render: (_, e) =>
-                        e.answer_keys.map((k) => (
-                          <Tag key={k.code}>{k.code}</Tag>
-                        )),
-                    },
-                    {
-                      title: "ĐÃ CÓ ĐIỂM",
-                      render: (_, e) =>
-                        `${grades.filter((g) => g.exam_id === e.id).length} học sinh`,
-                    },
-                    {
-                      title: "THAO TÁC",
-                      fixed: "right",
-                      width: 240,
-                      render: (_, e) => (
-                        <Space size={0}>
-                          <Button
-                            icon={<CameraOutlined aria-hidden />}
-                            size="small"
-                            onClick={() => setDetailId(e.id)}
-                          >
-                            Bài làm
-                          </Button>
-                          {!e.archived && (
-                            <Button
-                              type="text"
-                              aria-label={`Sửa bài kiểm tra ${e.title}`}
-                              icon={<EditOutlined aria-hidden />}
-                              onClick={() => setEditing(e)}
-                            />
-                          )}
-                          <Popconfirm
-                            title={
-                              e.archived
-                                ? "Mở lại bài kiểm tra?"
-                                : "Lưu trữ bài kiểm tra?"
+                        <Button
+                          aria-label={`Sửa bài thi ${e.title}`}
+                          icon={<EditOutlined aria-hidden />}
+                          size="small"
+                          disabled={e.archived}
+                          onClick={() => setEditing(e)}
+                        >
+                          Sửa
+                        </Button>
+                        <Popconfirm
+                          title={
+                            e.archived
+                              ? "Mở lại bài thi?"
+                              : "Lưu trữ bài thi và đóng kết nối điện thoại?"
+                          }
+                          okText="Đồng ý"
+                          cancelText="Hủy"
+                          onConfirm={async () => {
+                            try {
+                              await gradingFetch(
+                                `/api/grading/exams/${e.id}`,
+                                "PATCH",
+                                { archived: !e.archived, version: e.version },
+                              );
+                              await refresh();
+                              message.success("Đã cập nhật bài thi.");
+                            } catch (err) {
+                              message.error((err as Error).message);
                             }
-                            description="Điểm và lịch sử vẫn được giữ. Phiên nhận ảnh đang mở sẽ đóng khi lưu trữ."
-                            okText={e.archived ? "Mở lại" : "Lưu trữ"}
-                            cancelText="Hủy"
-                            onConfirm={async () => {
-                              try {
-                                await gradingFetch(
-                                  `/api/grading/exams/${e.id}`,
-                                  "PATCH",
-                                  { archived: !e.archived, version: e.version },
-                                );
-                                await refresh();
-                                message.success(
-                                  e.archived
-                                    ? "Đã mở lại bài kiểm tra."
-                                    : "Đã lưu trữ bài kiểm tra.",
-                                );
-                              } catch (error) {
-                                message.error((error as Error).message);
-                              }
-                            }}
-                          >
-                            <Button type="text" danger={!e.archived}>
-                              {e.archived ? "Mở lại" : "Lưu trữ"}
-                            </Button>
-                          </Popconfirm>
-                        </Space>
-                      ),
-                    },
-                  ]}
-                />
-              </>
-            ),
-          },
-        ]}
-      />
-      {editing && (
+                          }}
+                        >
+                          <Button size="small">
+                            {e.archived ? "Mở lại" : "Lưu trữ"}
+                          </Button>
+                        </Popconfirm>
+                        <Popconfirm
+                          title="Xóa bài thi chưa có lịch sử điểm?"
+                          description="Bài thi đã có điểm cần dùng lưu trữ để bảo toàn kết quả."
+                          okText="Xóa bài thi"
+                          cancelText="Hủy"
+                          onConfirm={async () => {
+                            try {
+                              await gradingFetch(
+                                `/api/grading/exams/${e.id}`,
+                                "DELETE",
+                                { version: e.version },
+                              );
+                              await refresh();
+                              message.success("Đã xóa bài thi khỏi danh sách.");
+                            } catch (err) {
+                              message.error((err as Error).message);
+                            }
+                          }}
+                        >
+                          <Button danger size="small" disabled={e.has_history}>
+                            Xóa
+                          </Button>
+                        </Popconfirm>
+                      </Space>
+                    ),
+                  },
+                ]}
+              />
+            </>
+          )}
+        </>
+      )}
+      {editing && cls && (
         <ExamEditor
-          key={editing === "new" ? "new" : `${editing.id}-${editing.version}`}
           exam={editing === "new" ? undefined : editing}
-          classes={data.classes}
+          classes={[cls]}
+          classId={cls.id}
           subject={subject}
           year={year}
-          semester={semester}
-          classId={classId}
-          locked={
-            editing !== "new" &&
-            (Boolean(editing.has_history) ||
-              grades.some((g) => g.exam_id === editing.id))
-          }
+          semester={1}
+          locked={editing !== "new" && Boolean(editing.has_history)}
+          templates={templates}
           onClose={() => setEditing(null)}
-          onSaved={() => {
-            void refresh();
-            setTab("exams");
-          }}
+          onSaved={() => void refresh()}
         />
-      )}
-      {detailId && (
-        <ExamDetail
-          examId={detailId}
+      )}{" "}
+      {detail && (
+        <DirectExamDetail
+          examId={detail}
           students={data.students}
           classes={data.classes}
-          onClose={() => setDetailId("")}
+          onClose={() => setDetail("")}
+          onChanged={() => void refresh()}
+        />
+      )}{" "}
+      {showTemplates && (
+        <TemplateManager
+          subject={subject}
+          templates={templates}
+          onClose={() => setShowTemplates(false)}
           onChanged={() => void refresh()}
         />
       )}
-      <Modal
-        open={Boolean(manual)}
-        title={
-          manual
-            ? `Điểm ${manual.student.name} · ${manual.exam.title}`
-            : "Nhập điểm"
-        }
-        onCancel={() => setManual(null)}
-        onOk={() => manualForm.submit()}
-        okText="Lưu điểm"
-        cancelText="Hủy"
-        confirmLoading={busy}
-        destroyOnHidden
-      >
-        {manual && (
-          <>
-            <p>
-              Điểm tối đa: {roundScore(maxExamScore(manual.exam.scoring))}. Chỉ
-              nhập khi giáo viên đã kiểm tra bài.
-            </p>
-            <Form form={manualForm} layout="vertical" onFinish={saveManual}>
-              <Form.Item
-                name="score"
-                label="Điểm bài kiểm tra"
-                rules={[
-                  { required: true, message: "Nhập điểm từ bài đã kiểm tra." },
-                ]}
-              >
-                <InputNumber
-                  aria-label="Điểm bài kiểm tra"
-                  min={0}
-                  max={roundScore(maxExamScore(manual.exam.scoring))}
-                  precision={2}
-                  style={{ width: "100%" }}
-                />
-              </Form.Item>
-              <Form.Item name="note" label="Ghi chú cập nhật điểm">
-                <Input.TextArea rows={3} maxLength={2000} />
-              </Form.Item>
-            </Form>
-            {manual.grade && (
-              <Popconfirm
-                title="Xóa điểm bài này?"
-                description="Điểm được bỏ khỏi tổng hợp; giá trị cũ vẫn có trong lịch sử."
-                okText="Xóa điểm"
-                cancelText="Hủy"
-                onConfirm={async () => {
-                  try {
-                    await gradingFetch(
-                      `/api/grading/grades/${manual.grade!.id}`,
-                      "DELETE",
-                      { version: manual.grade!.version },
-                    );
-                    setManual(null);
-                    await refresh();
-                    message.success("Đã xóa điểm khỏi bảng tổng hợp.");
-                  } catch (e) {
-                    message.error((e as Error).message);
-                  }
-                }}
-              >
-                <Button danger icon={<DeleteOutlined aria-hidden />}>
-                  Xóa điểm
-                </Button>
-              </Popconfirm>
-            )}
-          </>
-        )}
-      </Modal>
     </section>
   );
 }

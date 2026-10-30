@@ -33,6 +33,7 @@ export function databaseError(
       "Dữ liệu hoặc đáp án vừa thay đổi, hoặc học sinh đã có điểm. Tải lại và kiểm tra trước khi lưu.",
       409,
     );
+  if (error.code === "PT410") throw new GradingError(error.message, 410);
   if (error.code === "23505")
     throw new GradingError(
       "Số báo danh, bài chụp hoặc điểm đã tồn tại. Vui lòng tải lại.",
@@ -97,7 +98,8 @@ export async function gradeExam(
     .eq("id", id)
     .maybeSingle();
   databaseError(error);
-  if (!data) throw new GradingError("Không tìm thấy bài kiểm tra.", 404);
+  if (!data || data.deleted_at)
+    throw new GradingError("Không tìm thấy bài kiểm tra.", 404);
   if (!canAssess(user, data.subject))
     throw new GradingError("Bạn không được phân công môn học này.", 403);
   if (active && data.archived)
@@ -144,7 +146,9 @@ export async function captureSession(id: string, request: Request) {
     );
   const { data, error } = await createAdminClient()
     .from("school_capture_sessions")
-    .select("id,exam_id,active,expires_at,upload_count,max_uploads,token_hash")
+    .select(
+      "id,exam_id,active,expires_at,upload_count,max_uploads,token_hash,created_by",
+    )
     .eq("id", id)
     .maybeSingle();
   databaseError(error);
@@ -163,13 +167,23 @@ export async function captureSession(id: string, request: Request) {
     );
   const { data: exam, error: examError } = await createAdminClient()
     .from("school_exams")
-    .select("id,title,school_year,semester,archived,subject")
+    .select("*")
     .eq("id", data.exam_id)
     .maybeSingle();
   databaseError(examError);
-  if (!exam || exam.archived)
+  if (!exam || exam.archived || exam.deleted_at)
     throw new GradingError("Bài kiểm tra đã đóng.", 410);
-  return { session: data, exam, hash: tokenHash(raw) };
+  const actor = await createAdminClient().rpc("school_grade_actor", {
+    p_actor: data.created_by,
+    p_subject: exam.subject,
+  });
+  databaseError(actor.error);
+  if (!actor.data)
+    throw new GradingError(
+      "Giáo viên đã hết quyền chấm môn này. Quét mã mới từ giáo viên phụ trách.",
+      410,
+    );
+  return { session: data, exam: exam as Exam, hash: tokenHash(raw) };
 }
 export async function cleanupPaperImages(user?: AppUser) {
   const db = createAdminClient();

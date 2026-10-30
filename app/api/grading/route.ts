@@ -17,17 +17,23 @@ export async function GET(request: Request) {
     const semester = Number(params.get("semester"));
     if (!canAssess(user, subject))
       throw new GradingError("Bạn không được phân công môn học này.", 403);
-    if (!validSchoolYear(year) || ![1, 2].includes(semester))
+    if (
+      !validSchoolYear(year) ||
+      (params.has("semester") && ![1, 2].includes(semester))
+    )
       throw new GradingError("Chọn năm học và học kỳ hợp lệ.");
     const db = createAdminClient();
     let q = db
       .from("school_exams")
-      .select("*,school_grades(count)")
+      .select(
+        "id,school_year,semester,class_id,class_name,subject,title,kind,weight,exam_date,scoring,answer_keys,template_id,template_name,version,archived,created_by,created_at,updated_at,school_grades(count)",
+      )
       .eq("school_year", canonicalSchoolYear(year))
-      .eq("semester", semester)
+      .is("deleted_at", null)
       .eq("subject", subject)
       .order("created_at", { ascending: false })
       .limit(201);
+    if (params.has("semester")) q = q.eq("semester", semester);
     if (params.get("class_id")) q = q.eq("class_id", params.get("class_id"));
     const { data: exams, error } = await q;
     databaseError(error);

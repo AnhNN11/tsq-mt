@@ -32,6 +32,10 @@ export type ExamScoring = {
 export type AnswerKey = { code: string; answers: AnswerSet };
 export type Exam = {
   id: string;
+  template_id?: string | null;
+  template_name?: string;
+  paper_template?: import("./omr-reference").BubbleGroup[] | null;
+  deleted_at?: string | null;
   school_year: string;
   semester: 1 | 2;
   class_id: string;

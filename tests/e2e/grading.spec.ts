@@ -2,25 +2,29 @@ import {
   test,
   expect,
   type APIRequestContext,
-  type Page,
   type APIResponse,
+  type Page,
 } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 import sharp from "sharp";
-import { readSheet } from "read-excel-file/node";
 import { newStudent } from "../../lib/model";
+import type { Grade } from "../../lib/grading-model";
 import { sheetSvg } from "../../lib/sheet-template";
 import { loadStaffAccounts, type StaffAccount } from "./staff-accounts";
-let admin: StaffAccount, teacher: StaffAccount, other: StaffAccount;
-let examId = "",
-  scanId = "",
-  capturedSession = "",
-  captureUrl = "";
-const classId = "GRADING-E2E-CLASS",
-  pupilId = "GRADING-E2E-PUPIL",
+import type { CaptureInfo } from "../../components/paper-capture";
+let admin: StaffAccount,
+  teacher: StaffAccount,
+  other: StaffAccount,
+  examId = "",
+  sessionId = "",
+  token = "";
+const cls = "DIRECT-E2E-CLASS",
   className = "9/96",
-  title = "Kiểm tra chụp bài giả lập";
-const pupilName = "Học sinh kiểm thử chấm phiếu";
+  pupil1 = "DIRECT-E2E-PUPIL-1",
+  pupil2 = "DIRECT-E2E-PUPIL-2",
+  title = "DIRECT-E2E-Bài thi tự đặt tên",
+  templateId = "30000000-0000-4000-8000-000000000001";
 const answers = {
   multipleChoice: ["A", "B", "C"],
   trueFalse: [["Đ", "S", "Đ", "S"]],
@@ -32,9 +36,9 @@ const db = () =>
     process.env.SUPABASE_SECRET_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
-async function okay(response: Pick<APIResponse, "status" | "text" | "json">) {
-  expect(response.status(), await response.text()).toBe(200);
-  return response.json();
+async function okay(r: Pick<APIResponse, "status" | "text" | "json">) {
+  expect(r.status(), await r.text()).toBe(200);
+  return r.json();
 }
 async function login(request: APIRequestContext, account: StaffAccount) {
   await okay(
@@ -43,8 +47,16 @@ async function login(request: APIRequestContext, account: StaffAccount) {
     }),
   );
 }
-async function workspace(request: APIRequestContext) {
-  return okay(await request.get("/api/workspace"));
+async function state(r: APIRequestContext) {
+  return okay(await r.get("/api/workspace"));
+}
+async function navigate(page: Page) {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Chấm thi", exact: true }).click();
+  await page
+    .getByRole("button", { name: `Chọn lớp ${className}`, exact: true })
+    .click();
+  await page.getByRole("button", { name: "Tin học", exact: true }).click();
 }
 async function choose(page: Page, label: string, name: string) {
   await page.getByRole("combobox", { name: label, exact: true }).click();
@@ -57,52 +69,44 @@ async function choose(page: Page, label: string, name: string) {
 test.describe.configure({ mode: "serial" });
 test.beforeAll(async () => {
   const staff = await loadStaffAccounts();
-  admin = staff.find((u) => u.role === "admin")!;
-  teacher = staff.find((u) => u.username === "nhatanh.nguyen")!;
+  admin = staff.find((a) => a.role === "admin")!;
+  teacher = staff.find((a) => a.username === "nhatanh.nguyen")!;
   other = staff.find(
-    (u) => u.role === "teacher" && !u.subjects.includes("Tin học"),
+    (a) => a.role === "teacher" && !a.subjects.includes("Tin học"),
   )!;
 });
 test.afterAll(async ({ request }) => {
-  const service = db();
-  if (!examId) {
-    const orphan = await service
-      .from("school_exams")
-      .select("id")
-      .eq("class_id", classId)
-      .eq("title", title)
-      .maybeSingle();
-    expect(orphan.error).toBeNull();
-    examId = orphan.data?.id ?? "";
-  }
-  if (examId) {
-    const pictures = await service
-      .from("school_paper_scans")
-      .select("image_path")
-      .eq("exam_id", examId);
-    const paths =
-      pictures.data?.flatMap((p) => (p.image_path ? [p.image_path] : [])) ?? [];
-    if (paths.length)
-      expect(
-        (await service.storage.from("school-paper-scans").remove(paths)).error,
-      ).toBeNull();
+  const service = db(),
+    exams = await service.from("school_exams").select("id").eq("class_id", cls);
+  expect(exams.error).toBeNull();
+  for (const e of exams.data ?? []) {
     for (const table of [
+      "school_capture_receipts",
       "school_grade_history",
       "school_grades",
       "school_paper_scans",
       "school_capture_sessions",
       "school_exam_candidates",
-    ])
+    ]) {
       expect(
-        (await service.from(table).delete().eq("exam_id", examId)).error,
+        (await service.from(table).delete().eq("exam_id", e.id)).error,
       ).toBeNull();
+    }
     expect(
-      (await service.from("school_exams").delete().eq("id", examId)).error,
+      (await service.from("school_exams").delete().eq("id", e.id)).error,
     ).toBeNull();
   }
+  expect(
+    (
+      await service
+        .from("school_paper_templates")
+        .delete()
+        .like("name", "DIRECT-E2E-%")
+    ).error,
+  ).toBeNull();
   await login(request, admin);
-  const current = await workspace(request);
-  if (current.data.classes.some((c: { id: string }) => c.id === classId))
+  const current = await state(request);
+  if (current.data.classes.some((c: { id: string }) => c.id === cls))
     await okay(
       await request.put("/api/workspace", {
         data: {
@@ -110,25 +114,24 @@ test.afterAll(async ({ request }) => {
           data: {
             ...current.data,
             classes: current.data.classes.filter(
-              (c: { id: string }) => c.id !== classId,
+              (c: { id: string }) => c.id !== cls,
             ),
             students: current.data.students.filter(
-              (s: { id: string }) => s.id !== pupilId,
+              (s: { id: string }) => ![pupil1, pupil2].includes(s.id),
             ),
           },
         },
       }),
     );
 });
-
-test("teacher configures all three sections, phone capture stays private, and explicit review publishes the grade", async ({
+test("class, subject and custom exam connect a phone; each capture automatically saves once without persisting any photo", async ({
   page,
   request,
   browser,
 }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(200_000);
   await login(request, admin);
-  const initial = await workspace(request);
+  const initial = await state(request);
   await okay(
     await request.put("/api/workspace", {
       data: {
@@ -137,33 +140,31 @@ test("teacher configures all three sections, phone capture stays private, and ex
           ...initial.data,
           classes: [
             ...initial.data.classes,
-            { id: classId, name: className, track: "Kiểm thử", note: "" },
+            { id: cls, name: className, track: "Kiểm thử", note: "" },
           ],
           students: [
             ...initial.data.students,
-            {
+            ...[pupil1, pupil2].map((id, i) => ({
               ...newStudent(),
-              id: pupilId,
-              name: pupilName,
+              id,
+              name: `Học sinh giả lập ${i + 1}`,
               className,
               gender: "Nam",
               birthDate: "12/10/2012",
               ethnicity: "Kinh",
               priorEducation: "Tốt",
-            },
+            })),
           ],
         },
       },
     }),
   );
   await login(page.request, teacher);
-  await page.goto("/");
-  await choose(page, "Lớp học", `Lớp ${className}`);
-  await page.getByRole("button", { name: "Quản lý điểm", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Tạo bài kiểm tra", exact: true })
-    .click();
+  await navigate(page);
+  await expect(page.getByRole("combobox", { name: /Học kỳ/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Tạo bài thi", exact: true }).click();
   await page.getByLabel("Tên bài kiểm tra", { exact: true }).fill(title);
+  await choose(page, "Mẫu phiếu ô tô", "Phiếu chung ba phần");
   await page
     .getByRole("tab", { name: "Đáp án và thang điểm", exact: true })
     .click();
@@ -199,23 +200,20 @@ test("teacher configures all three sections, phone capture stays private, and ex
   await page
     .getByRole("button", { name: "Lưu bài kiểm tra", exact: true })
     .click();
-  const createResponse = await created;
-  expect(createResponse.status(), await createResponse.text()).toBe(200);
-  examId = (await createResponse.json()).exam.id;
-  await page.getByRole("button", { name: "Bài làm", exact: true }).click();
-  const sessionResponse = page.waitForResponse(
+  examId = (await okay(await created)).exam.id;
+  await page.getByRole("button", { name: title, exact: true }).click();
+  const connected = page.waitForResponse(
     (r) =>
       r.url().endsWith(`/exams/${examId}/sessions`) &&
       r.request().method() === "POST",
   );
   await page
-    .getByRole("button", { name: "Nhận bài bằng mã QR", exact: true })
+    .getByRole("button", { name: "Kết nối điện thoại bằng QR", exact: true })
     .click();
-  const session = await (await sessionResponse).json();
-  captureUrl = session.url;
-  capturedSession = session.id;
+  const session = await okay(await connected);
+  sessionId = session.id;
+  token = new URL(session.url).hash.slice(1);
   await expect(page.locator(".ant-qrcode canvas")).toBeVisible();
-  const token = new URL(captureUrl).hash.slice(1);
   const mobile = await browser.newContext({
     baseURL: "http://127.0.0.1:3000",
     viewport: { width: 390, height: 844 },
@@ -225,24 +223,32 @@ test("teacher configures all three sections, phone capture stays private, and ex
   const phone = await mobile.newPage();
   expect(
     (
-      await mobile.request.get(`/api/capture/${capturedSession}`, {
+      await mobile.request.get(`/api/capture/${sessionId}`, {
         headers: { authorization: `Bearer ${"a".repeat(43)}` },
       })
     ).status(),
   ).toBe(410);
-  const publicMetadata = await okay(
-    await mobile.request.get(`/api/capture/${capturedSession}`, {
+  expect(
+    (await mobile.request.get(`/api/grading/exams/${examId}`)).status(),
+  ).toBe(401);
+  const metadata: CaptureInfo = await okay(
+    await mobile.request.get(`/api/capture/${sessionId}`, {
       headers: { authorization: `Bearer ${token}` },
     }),
   );
-  expect(Object.keys(publicMetadata).sort()).toEqual(
-    ["expiresAt", "remaining", "schoolYear", "semester", "title"].sort(),
-  );
-  await phone.goto(captureUrl);
+  expect(metadata.variants).toEqual(["0001"]);
+  expect(JSON.stringify(metadata)).not.toContain('"answer_keys"');
+  expect(metadata.candidates).toHaveLength(2);
+  phone.on("pageerror", (e) => {
+    throw e;
+  });
+  await phone.goto(session.url);
   await expect(
     phone.getByRole("heading", { name: title, exact: true }),
   ).toBeVisible();
-  await expect(phone.getByText(pupilName, { exact: true })).toHaveCount(0);
+  await expect(
+    phone.getByRole("combobox", { name: "Học sinh đang chụp", exact: true }),
+  ).toBeVisible();
   await expect(
     phone.getByLabel("Chụp ảnh bài làm", { exact: true }),
   ).toHaveAttribute("capture", "environment");
@@ -258,149 +264,145 @@ test("teacher configures all three sections, phone capture stays private, and ex
   )
     .png()
     .toBuffer();
+  const scored = phone.waitForResponse(
+    (r) =>
+      r.url().includes(`/api/capture/${sessionId}`) &&
+      r.request().method() === "POST",
+    { timeout: 25000 },
+  );
   await phone.getByLabel("Chọn ảnh bài làm", { exact: true }).setInputFiles({
-    name: "paper-test.png",
+    name: "fake-paper.png",
     mimeType: "image/png",
     buffer: image,
   });
-  const uploaded = phone.waitForResponse(
-    (r) =>
-      r.url().includes(`/api/capture/${capturedSession}`) &&
-      r.request().method() === "POST",
+  const result = await okay(await scored);
+  expect(result.score).toBe(10);
+  await expect(phone.locator(".capture-result")).toContainText(
+    "Học sinh giả lập 1: 10 / 10",
   );
-  await phone
-    .getByRole("button", { name: "Gửi ảnh bài làm", exact: true })
-    .click();
-  const uploadResponse = await uploaded;
-  expect(uploadResponse.status(), await uploadResponse.text()).toBe(200);
-  scanId = (await uploadResponse.json()).id;
-  await expect(phone.getByText("Đã gửi 1 ảnh trong lần mở này")).toBeVisible();
-  await phone
-    .getByLabel("Chọn ảnh bài làm", { exact: true })
-    .setInputFiles({
-      name: "same-paper.png",
-      mimeType: "image/png",
-      buffer: image,
-    });
-  const duplicated = phone.waitForResponse(
-    (r) =>
-      r.url().includes(`/api/capture/${capturedSession}`) &&
-      r.request().method() === "POST",
+  await expect(phone.getByTestId("capture-current-student")).toContainText(
+    "Học sinh giả lập 2",
   );
-  await phone
-    .getByRole("button", { name: "Gửi ảnh bài làm", exact: true })
-    .click();
-  const duplicateBody = await okay(await duplicated);
-  expect(duplicateBody.duplicate).toBe(true);
-  expect(duplicateBody.id).toBe(scanId);
-  const second = await mobile.request.get(`/api/grading/exams/${examId}`);
-  expect(second.status()).toBe(401);
-  expect(
-    (await mobile.request.get(`/api/grading/scans/${scanId}/image`)).status(),
-  ).toBe(401);
+  const secondImage = await sharp(
+    Buffer.from(
+      sheetSvg({
+        answers,
+        candidateNumber: "00000002",
+        variant: "0001",
+        title,
+      }),
+    ),
+  )
+    .png()
+    .toBuffer();
+  const metadataNow: CaptureInfo = await okay(
+    await mobile.request.get(`/api/capture/${sessionId}`, {
+      headers: { authorization: `Bearer ${token}` },
+    }),
+  );
+  const payload = {
+    image: { name: "second.png", mimeType: "image/png", buffer: secondImage },
+    studentId: pupil2,
+    variant: "0001",
+    requestId: randomUUID(),
+    examVersion: String(metadataNow.examVersion),
+  };
+  await okay(
+    await mobile.request.post(`/api/capture/${sessionId}`, {
+      headers: { authorization: `Bearer ${token}` },
+      multipart: payload,
+    }),
+  );
+  const repeated = await okay(
+    await mobile.request.post(`/api/capture/${sessionId}`, {
+      headers: { authorization: `Bearer ${token}` },
+      multipart: payload,
+    }),
+  );
+  expect(repeated.duplicate).toBe(true);
   let detail = await okay(
     await page.request.get(`/api/grading/exams/${examId}`),
   );
-  expect(detail.grades).toHaveLength(0);
-  expect(detail.scans[0].status).toBe("uploaded");
-  const preview = await page.request.get(`/api/grading/scans/${scanId}/image`);
-  expect(preview.status()).toBe(200);
-  expect(preview.headers()["content-type"]).toContain("image/jpeg");
-  const anonymousStorage = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+  expect(detail.grades).toHaveLength(2);
+  expect(detail.scans).toHaveLength(0);
+  expect(detail.grades.find((g: Grade) => g.student_id === pupil1).source).toBe(
+    "scan",
   );
   expect(
+    detail.grades.find((g: Grade) => g.student_id === pupil1).scan_id,
+  ).toBeNull();
+  expect(detail.exam.template_id).toBe(templateId);
+  expect(
+    (await db().storage.from("school-paper-scans").list("", { limit: 1000 }))
+      .data,
+  ).toHaveLength(0);
+  expect(
     (
-      await anonymousStorage.storage
-        .from("school-paper-scans")
-        .download(detail.scans[0].image_path)
-    ).error,
-  ).not.toBeNull();
+      await mobile.request.post(`/api/capture/${sessionId}`, {
+        headers: { authorization: `Bearer ${token}` },
+        multipart: {
+          ...payload,
+          image: { name: "wrong.png", mimeType: "image/png", buffer: image },
+          requestId: randomUUID(),
+        },
+      })
+    ).status(),
+  ).toBe(422);
+  const blank = await sharp(
+    Buffer.from(sheetSvg({ variant: "0001", candidateNumber: "00000002" })),
+  )
+    .png()
+    .toBuffer();
+  expect(
+    (
+      await mobile.request.post(`/api/capture/${sessionId}`, {
+        headers: { authorization: `Bearer ${token}` },
+        multipart: {
+          image: { name: "blank.png", mimeType: "image/png", buffer: blank },
+          studentId: pupil2,
+          variant: "0001",
+          requestId: randomUUID(),
+          examVersion: String(detail.exam.version),
+        },
+      })
+    ).status(),
+  ).toBe(422);
+  detail = await okay(await page.request.get(`/api/grading/exams/${examId}`));
+  expect(detail.grades).toHaveLength(2);
+  expect(detail.history).toHaveLength(2);
+  await page
+    .getByRole("button", { name: "Ẩn mã, tiếp tục chấm", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", {
+      name: "Quét một lần để chấm cả lớp",
+      exact: true,
+    }),
+  ).not.toBeVisible();
+  await expect(page.locator(".direct-score").first()).toContainText("10 / 10");
   const closed = page.waitForResponse(
     (r) =>
-      r.url().endsWith(`/api/grading/sessions/${capturedSession}`) &&
+      r.url().endsWith(`/api/grading/sessions/${sessionId}`) &&
       r.request().method() === "DELETE",
   );
   await page
-    .getByRole("button", { name: "Đóng phiên nhận bài", exact: true })
+    .getByRole("button", { name: "Đóng kết nối điện thoại", exact: true })
     .click();
   await okay(await closed);
   expect(
     (
-      await mobile.request.get(`/api/capture/${capturedSession}`, {
+      await mobile.request.get(`/api/capture/${sessionId}`, {
         headers: { authorization: `Bearer ${token}` },
       })
     ).status(),
   ).toBe(410);
   await mobile.close();
-  await page
-    .getByRole("button", { name: "Làm mới", exact: true })
-    .last()
-    .click();
-  await page
-    .getByRole("button", { name: "Xử lý ảnh chờ", exact: true })
-    .click();
-  await expect(
-    page.getByText("Chờ giáo viên duyệt", { exact: true }),
-  ).toBeVisible();
-  detail = await okay(await page.request.get(`/api/grading/exams/${examId}`));
-  expect(detail.grades).toHaveLength(0);
-  expect(detail.scans[0].result.answers).toEqual(answers);
-  const early = await page.request.post(
-    `/api/grading/scans/${scanId}/approve`,
-    {
-      data: {
-        version: detail.scans[0].version,
-        examVersion: detail.exam.version,
-        studentId: pupilId,
-        variant: "0001",
-        answers,
-      },
-    },
-  );
-  expect(early.status()).toBe(400);
-  await page
-    .getByRole("button", { name: `Kiểm tra bài ${scanId}`, exact: true })
-    .click();
-  const review = page.getByRole("dialog", {
-    name: `Kiểm tra bài chụp · ${title}`,
-    exact: true,
-  });
-  await expect(review.locator(".scan-score-preview")).toContainText("10 / 10");
-  await expect(
-    review.getByRole("button", { name: "Duyệt và ghi điểm", exact: true }),
-  ).toBeDisabled();
-  await review.getByRole("checkbox").check();
-  await review
-    .getByRole("button", { name: "Duyệt và ghi điểm", exact: true })
-    .click();
-  await expect(page.getByText("Đã duyệt", { exact: true })).toBeVisible();
-  detail = await okay(await page.request.get(`/api/grading/exams/${examId}`));
-  expect(detail.grades).toHaveLength(1);
-  expect(detail.grades[0].score).toBe(10);
-  expect(detail.scans[0].approval.studentId).toBe(pupilId);
-  expect(detail.scans[0].approval.variant).toBe("0001");
-  await login(request, admin);
-  const state = await workspace(request);
-  state.data.students.find((s: { id: string }) => s.id === pupilId).family =
-    "Đã cập nhật hồ sơ sau khi chấm";
-  await okay(
-    await request.put("/api/workspace", {
-      data: { data: state.data, revision: state.revision },
-    }),
-  );
-  expect(
-    (await okay(await page.request.get(`/api/grading/exams/${examId}`)))
-      .grades[0].score,
-  ).toBe(10);
 });
-
-test("grade permissions, history, stale revisions, export and expired-image cleanup preserve approved marks", async ({
+test("templates have CRUD and subject permissions; frozen exam layouts, grade history, exports and revision guards preserve results", async ({
   page,
   request,
 }) => {
-  test.setTimeout(150_000);
+  test.setTimeout(160_000);
   await login(page.request, teacher);
   await login(request, other);
   expect((await request.get(`/api/grading/exams/${examId}`)).status()).toBe(
@@ -408,44 +410,118 @@ test("grade permissions, history, stale revisions, export and expired-image clea
   );
   expect(
     (
-      await request.get(
-        "/api/grading?year=2026-2027&semester=1&subject=Tin%20h%E1%BB%8Dc",
-      )
+      await request.get("/api/grading/templates?subject=Tin%20h%E1%BB%8Dc")
     ).status(),
   ).toBe(403);
+  let detail = await okay(
+    await page.request.get(`/api/grading/exams/${examId}`),
+  );
+  const original = JSON.stringify(detail.exam.paper_template);
+  const created = await okay(
+    await page.request.post("/api/grading/templates", {
+      data: {
+        name: "DIRECT-E2E-Mẫu riêng",
+        subject: "Tin học",
+        groups: detail.exam.paper_template,
+      },
+    }),
+  );
+  const t = created.template;
+  const draft = await okay(
+    await page.request.post("/api/grading/exams", {
+      data: {
+        ...detail.exam,
+        title: "DIRECT-E2E-Bài thi giữ mẫu riêng",
+        template_id: t.id,
+        template_version: t.version,
+      },
+    }),
+  );
+
+  expect(
+    (
+      await request.post("/api/grading/templates", {
+        data: {
+          id: t.id,
+          version: t.version,
+          name: "DIRECT-E2E-Không được sửa",
+          subject: "Tiếng Anh",
+          groups: t.groups,
+        },
+      })
+    ).status(),
+  ).toBe(403);
+  const updated = await okay(
+    await page.request.post("/api/grading/templates", {
+      data: {
+        ...t,
+        name: "DIRECT-E2E-Mẫu đã sửa",
+        groups: t.groups.map(
+          (g: { points: { x: number; y: number }[] }, i: number) =>
+            i === 0
+              ? {
+                  ...g,
+                  points: g.points.map((p) => ({ ...p, x: p.x + 0.001 })),
+                }
+              : g,
+        ),
+      },
+    }),
+  );
+  expect(
+    (
+      await page.request.post("/api/grading/templates", {
+        data: { ...t, name: "DIRECT-E2E-Yêu cầu cũ" },
+      })
+    ).status(),
+  ).toBe(409);
+  await okay(
+    await page.request.delete("/api/grading/templates", {
+      data: { id: t.id, version: updated.template.version },
+    }),
+  );
+  expect(
+    (await okay(await page.request.get(`/api/grading/exams/${examId}`))).exam
+      .paper_template,
+  ).toEqual(JSON.parse(original));
+  expect(
+    (await okay(await page.request.get(`/api/grading/exams/${draft.exam.id}`)))
+      .exam.paper_template,
+  ).toEqual(JSON.parse(original));
   const direct = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
   );
-  const auth = await direct.auth.signInWithPassword({
+  await direct.auth.signInWithPassword({
     email: other.email,
     password: other.password,
   });
-  expect(auth.error).toBeNull();
   expect(
     (await direct.from("school_exams").select("id").eq("id", examId)).data,
   ).toEqual([]);
   expect(
+    (await direct.from("school_capture_receipts").select("*")).error,
+  ).not.toBeNull();
+  expect(
     (
-      await direct.rpc("school_save_grade", {
-        p_actor: teacher.username,
-        p_exam: examId,
-        p_student: pupilId,
-        p_grade: { score: 10, max_score: 10 },
-        p_version: 0,
+      await direct.rpc("school_capture_grade", {
+        p_session: sessionId,
+        p_hash: "a".repeat(64),
+        p_request: randomUUID(),
+        p_image_hash: "b".repeat(64),
+        p_student: pupil1,
+        p_exam_version: 1,
+        p_grade: { score: 10, max_score: 10, variant: "0001" },
       })
     ).error,
   ).not.toBeNull();
-  let detail = await okay(
-    await page.request.get(`/api/grading/exams/${examId}`),
-  );
-  let grade = detail.grades[0];
+  let grade = detail.grades.find((g: Grade) => g.student_id === pupil1);
   expect(
     (
       await page.request.post("/api/grading/grades", {
         data: {
           examId,
-          studentId: pupilId,
+          studentId: pupil1,
           score: 11,
           note: "",
           version: grade.version,
@@ -457,9 +533,9 @@ test("grade permissions, history, stale revisions, export and expired-image clea
     await page.request.post("/api/grading/grades", {
       data: {
         examId,
-        studentId: pupilId,
+        studentId: pupil1,
         score: 6.5,
-        note: "Giáo viên đã đối chiếu bài",
+        note: "Đã đối chiếu bài giấy",
         version: grade.version,
       },
     }),
@@ -469,7 +545,7 @@ test("grade permissions, history, stale revisions, export and expired-image clea
       await page.request.post("/api/grading/grades", {
         data: {
           examId,
-          studentId: pupilId,
+          studentId: pupil1,
           score: 9,
           note: "Yêu cầu cũ",
           version: grade.version,
@@ -477,85 +553,180 @@ test("grade permissions, history, stale revisions, export and expired-image clea
       })
     ).status(),
   ).toBe(409);
-  detail = await okay(await page.request.get(`/api/grading/exams/${examId}`));
-  grade = detail.grades[0];
-  expect(grade.score).toBe(6.5);
-  expect(detail.history.length).toBeGreaterThanOrEqual(2);
-  expect(detail.scans[0].approval.score).toBe(10);
-  const changed = {
-    ...detail.exam,
-    scoring: { ...detail.exam.scoring, multipleChoicePoints: 2 },
-  };
   expect(
     (
-      await page.request.put(`/api/grading/exams/${examId}`, { data: changed })
+      await page.request.delete(`/api/grading/exams/${examId}`, {
+        data: { version: detail.exam.version },
+      })
     ).status(),
   ).toBe(400);
-  await page.goto("/");
-  await choose(page, "Lớp học", `Lớp ${className}`);
-  await page.getByRole("button", { name: "Quản lý điểm", exact: true }).click();
-  await expect(
-    page.getByRole("button", {
-      name: `Điểm ${pupilName} bài ${title}`,
-      exact: true,
+  await login(request, admin);
+  const current = await state(request);
+  current.data.students.find((s: { id: string }) => s.id === pupil1).family =
+    "Đã cập nhật sau khi chấm";
+  await okay(
+    await request.put("/api/workspace", {
+      data: { data: current.data, revision: current.revision },
     }),
-  ).toContainText("6.5");
+  );
+  detail = await okay(await page.request.get(`/api/grading/exams/${examId}`));
+  expect(detail.grades.find((g: Grade) => g.student_id === pupil1).score).toBe(
+    6.5,
+  );
+  expect(detail.history.length).toBeGreaterThanOrEqual(2);
+  expect(
+    (
+      await page.request.put(`/api/grading/exams/${examId}`, {
+        data: {
+          ...detail.exam,
+          scoring: { ...detail.exam.scoring, multipleChoicePoints: 2 },
+        },
+      })
+    ).status(),
+  ).toBe(400);
+  await navigate(page);
   const downloading = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Xuất bảng điểm", exact: true })
     .click();
-  const path = await (await downloading).path();
-  expect((await readSheet(path!, "Bảng điểm học kỳ")).flat()).toContain(6.5);
-  const ExcelJS = (await import("exceljs")).default;
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(path!);
-  workbook.eachSheet((s) =>
+  const path = await (await downloading).path(),
+    ExcelJS = (await import("exceljs")).default,
+    book = new ExcelJS.Workbook();
+  await book.xlsx.readFile(path!);
+  let found = false;
+  book.eachSheet((s) =>
     s.eachRow((r) =>
       r.eachCell((c) => {
         expect(c.font.name).toBe("Times New Roman");
         expect(c.font.size).toBeGreaterThanOrEqual(14);
+        if (c.value === 6.5) found = true;
       }),
     ),
+  );
+  expect(found).toBe(true);
+  expect(JSON.stringify(book.getWorksheet(1)?.getRow(3).values)).not.toContain(
+    "Học kỳ",
   );
   await okay(
     await page.request.patch(`/api/grading/exams/${examId}`, {
       data: { archived: true, version: detail.exam.version },
     }),
   );
-  await page.getByRole("button", { name: "Làm mới", exact: true }).click();
-  await expect(
-    page.getByRole("button", {
-      name: `Điểm ${pupilName} bài ${title}`,
-      exact: true,
-    }),
-  ).toContainText("6.5");
   expect(
     (
-      await page.request.get(
-        `/grading/exams/${examId}/sheets?student=all&variant=0001`,
-      )
-    ).status(),
-  ).toBe(200);
-  await db()
-    .from("school_paper_scans")
-    .update({ image_expires_at: "2020-01-01T00:00:00Z" })
-    .eq("id", scanId);
-  expect((await okay(await request.post("/api/grading/cleanup"))).removed).toBe(
-    0,
-  );
+      await okay(await page.request.get(`/api/grading/exams/${examId}`))
+    ).grades.find((g: Grade) => g.student_id === pupil1).score,
+  ).toBe(6.5);
   expect(
-    (await okay(await page.request.post("/api/grading/cleanup"))).removed,
-  ).toBeGreaterThanOrEqual(1);
+    (await page.request.post(`/api/grading/exams/${examId}/sessions`)).status(),
+  ).toBe(400);
+  const printed = await page.request.get(
+    `/grading/exams/${examId}/sheets?student=all&variant=0001`,
+  );
+  expect(printed.status()).toBe(200);
+  expect(await printed.text()).toContain("Phiếu trả lời");
   detail = await okay(await page.request.get(`/api/grading/exams/${examId}`));
-  expect(detail.scans[0].image_path).toBeNull();
-  expect(detail.grades[0].score).toBe(6.5);
-  expect(detail.history.length).toBeGreaterThanOrEqual(2);
+  await okay(
+    await page.request.patch(`/api/grading/exams/${examId}`, {
+      data: { archived: false, version: detail.exam.version },
+    }),
+  );
+  grade = detail.grades.find((g: Grade) => g.student_id === pupil1);
   await okay(
     await page.request.delete(`/api/grading/grades/${grade.id}`, {
       data: { version: grade.version },
     }),
   );
   detail = await okay(await page.request.get(`/api/grading/exams/${examId}`));
-  expect(detail.grades).toHaveLength(0);
+  expect(
+    detail.grades.find((g: Grade) => g.student_id === pupil1),
+  ).toBeUndefined();
+  expect(detail.grades).toHaveLength(1);
   expect(detail.history[0].action).toBe("deleted");
+  // Empty exam deletion is a real CRUD path; existing marked exams stay protected.
+  const empty = await okay(
+    await page.request.post("/api/grading/exams", {
+      data: {
+        ...detail.exam,
+        title: "DIRECT-E2E-Bài thi được xóa",
+        template_version: 1,
+      },
+    }),
+  );
+  await okay(
+    await page.request.delete(`/api/grading/exams/${empty.exam.id}`, {
+      data: { version: empty.exam.version },
+    }),
+  );
+  expect(
+    (await page.request.get(`/api/grading/exams/${empty.exam.id}`)).status(),
+  ).toBe(404);
+});
+
+test("teacher creates, views, renames and removes a subject template through the table interface", async ({
+  page,
+}) => {
+  test.setTimeout(100_000);
+  await login(page.request, teacher);
+  await navigate(page);
+  await page
+    .getByRole("button", { name: "Mẫu phiếu ô tô", exact: true })
+    .click();
+  const catalog = page.getByRole("dialog", {
+    name: "Mẫu phiếu ô tô · Tin học",
+    exact: true,
+  });
+  const base = catalog
+    .getByRole("row")
+    .filter({ hasText: "Phiếu chung ba phần" });
+  await expect(
+    base.getByRole("button", { name: "Sửa", exact: true }),
+  ).toBeDisabled();
+  await base.getByRole("button", { name: "Tạo từ mẫu", exact: true }).click();
+  let editor = page.getByRole("dialog", {
+    name: "Tạo mẫu phiếu mới",
+    exact: true,
+  });
+  await editor
+    .getByRole("textbox", { name: "Tên mẫu phiếu", exact: true })
+    .fill("DIRECT-E2E-Mẫu giao diện");
+  await expect(editor.locator("svg ellipse")).toHaveCount(602);
+  await editor
+    .getByRole("button", { name: "Lưu mẫu phiếu", exact: true })
+    .click();
+  await expect(editor).not.toBeVisible();
+  let row = catalog
+    .getByRole("row")
+    .filter({ hasText: "DIRECT-E2E-Mẫu giao diện" });
+  await expect(row).toBeVisible();
+  await row.getByRole("button", { name: "Sửa", exact: true }).click();
+  editor = page.getByRole("dialog", { name: "Sửa mẫu phiếu", exact: true });
+  await editor
+    .getByRole("textbox", { name: "Tên mẫu phiếu", exact: true })
+    .fill("DIRECT-E2E-Mẫu giao diện đã sửa");
+  await editor
+    .getByRole("button", { name: "Lưu mẫu phiếu", exact: true })
+    .click();
+  await expect(editor).not.toBeVisible();
+  row = catalog
+    .getByRole("row")
+    .filter({ hasText: "DIRECT-E2E-Mẫu giao diện đã sửa" });
+  await row.getByRole("button", { name: "Xem mẫu", exact: true }).click();
+  const preview = page.getByRole("dialog", {
+    name: "Xem bố cục mẫu phiếu",
+    exact: true,
+  });
+  await expect(preview.locator("svg ellipse")).toHaveCount(602);
+  await preview
+    .getByRole("button", { name: "Đóng", exact: true })
+    .last()
+    .click();
+  await expect(preview).not.toBeVisible();
+  await row.getByRole("button", { name: "Xóa", exact: true }).click();
+  await page.getByRole("button", { name: "Xóa mẫu", exact: true }).click();
+  await expect(
+    catalog
+      .getByRole("row")
+      .filter({ hasText: "DIRECT-E2E-Mẫu giao diện đã sửa" }),
+  ).toHaveCount(0);
 });

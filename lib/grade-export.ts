@@ -1,10 +1,5 @@
 import type { Exam, Grade } from "./grading-model";
-import {
-  semesterAverage,
-  EXAM_KINDS,
-  maxExamScore,
-  roundScore,
-} from "./grading-model";
+import { semesterAverage, maxExamScore, roundScore } from "./grading-model";
 import type { Student, SchoolClass } from "./model";
 import { downloadBlob } from "./report-data";
 export async function exportGradebook({
@@ -21,7 +16,7 @@ export async function exportGradebook({
   students: Student[];
   classes: SchoolClass[];
   year: string;
-  semester: number;
+  semester?: number;
   subject: string;
 }) {
   const ExcelJS = (await import("exceljs")).default;
@@ -31,14 +26,14 @@ export async function exportGradebook({
     (e) =>
       !e.archived || grades.some((g) => g.exam_id === e.id && !g.deleted_at),
   );
-  const sheet = book.addWorksheet("Bảng điểm học kỳ");
+  const sheet = book.addWorksheet("Bảng điểm");
   sheet.addRow(["PHÂN HIỆU 1 · TRƯỜNG THIẾU SINH QUÂN MIỀN TRUNG"]);
   sheet.addRow(["KHOA TIN HỌC VÀ NGOẠI NGỮ"]);
   sheet.addRow([
-    `BẢNG ĐIỂM · ${subject} · Học kỳ ${semester === 1 ? "một" : "hai"} · ${year}`,
+    `BẢNG ĐIỂM · ${subject}${semester ? ` · Học kỳ ${semester === 1 ? "một" : "hai"}` : ""} · ${year}`,
   ]);
   sheet.addRow([
-    "Chỉ gồm điểm đã duyệt; tổng hợp quy về thang 10 theo trọng số cấu hình. Ô trống chưa được tính thành điểm 0.",
+    "Gồm điểm đã lưu; tổng hợp quy về thang 10 theo trọng số cấu hình. Ô trống chưa được tính thành điểm 0.",
   ]);
   for (let row = 1; row <= 4; row++)
     sheet.mergeCells(row, 1, row, active.length + 5);
@@ -87,17 +82,17 @@ export async function exportGradebook({
     c.width =
       i === 1 ? 32 : i === 2 ? 12 : i > 2 && i < active.length + 3 ? 24 : 20;
   });
-  const details = book.addWorksheet("Chi tiết điểm đã duyệt");
+  const details = book.addWorksheet("Chi tiết điểm đã lưu");
   details.addRow([
     "Học sinh",
     "Lớp",
     "Bài kiểm tra",
-    "Loại điểm",
+    "Tên bài thi",
     "Điểm",
     "Điểm tối đa",
     "Trọng số",
     "Nguồn nhập",
-    "Người duyệt",
+    "Giáo viên cập nhật",
     "Cập nhật",
     "Ghi chú",
   ]);
@@ -111,11 +106,11 @@ export async function exportGradebook({
       grade.student_name,
       exam.class_name,
       exam.title,
-      EXAM_KINDS[exam.kind],
+      exam.title,
       grade.score,
       grade.max_score,
       exam.weight,
-      grade.source === "scan" ? "Duyệt từ ảnh" : "Nhập trực tiếp",
+      grade.source === "scan" ? "Chấm từ điện thoại" : "Nhập trực tiếp",
       grade.reviewed_by,
       new Date(grade.updated_at).toLocaleString("vi-VN", {
         timeZone: "Asia/Ho_Chi_Minh",
@@ -127,12 +122,12 @@ export async function exportGradebook({
     c.width = [0, 2, 10].includes(i) ? 32 : 20;
   });
   details.views = [{ state: "frozen", ySplit: 1 }];
-  const config = book.addWorksheet("Bài kiểm tra và thang điểm");
+  const config = book.addWorksheet("Bài thi và thang điểm");
   config.addRow([
     "Bài kiểm tra",
     "Lớp",
     "Ngày",
-    "Loại điểm",
+    "Tên bài thi",
     "Trọng số",
     "Trạng thái",
     "Số câu chọn đáp án",
@@ -149,7 +144,7 @@ export async function exportGradebook({
       e.title,
       e.class_name,
       e.exam_date,
-      EXAM_KINDS[e.kind],
+      e.title,
       e.weight,
       e.archived ? "Đã lưu trữ" : "Đang sử dụng",
       e.scoring.multipleChoiceCount,
@@ -214,6 +209,6 @@ export async function exportGradebook({
     new Blob([new Uint8Array(buffer)], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     }),
-    `bang-diem-${subject}-hoc-ky-${semester}-${year.replace(/\s/g, "")}.xlsx`,
+    `bang-diem-${subject}-${year.replace(/\s/g, "")}.xlsx`,
   );
 }

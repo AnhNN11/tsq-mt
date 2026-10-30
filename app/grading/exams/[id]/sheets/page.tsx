@@ -48,6 +48,7 @@ async function SheetContent({
     databaseError(error);
     printData = {
       title: exam.title,
+      groups: exam.paper_template ?? undefined,
       subject: exam.subject,
       variant,
       candidates: query.student === "blank" ? [] : (data ?? []),

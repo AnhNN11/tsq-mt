@@ -96,7 +96,7 @@ const labels: Record<View, string> = {
   overview: "Tổng quan quản lý",
   students: "Quản lý lớp và học sinh",
   assessments: "Quản lý học lực",
-  grades: "Quản lý điểm",
+  grades: "Chấm thi",
   talents: "Quản lý năng khiếu",
   lessons: "Quản lý giảng dạy",
   reports: "Báo cáo và thống kê",
@@ -357,16 +357,18 @@ export default function WorkspaceDashboard() {
           </div>
           <Space>
             <span className="school-year">{data.settings.schoolYear}</span>
-            <Select
-              aria-label="Môn học"
-              value={subject}
-              onChange={(value) => {
-                setSubject(value);
-                reset();
-              }}
-              options={subjects.map((s) => ({ value: s, label: `Môn ${s}` }))}
-              style={{ minWidth: 135 }}
-            />
+            {view !== "grades" && (
+              <Select
+                aria-label="Môn học"
+                value={subject}
+                onChange={(value) => {
+                  setSubject(value);
+                  reset();
+                }}
+                options={subjects.map((s) => ({ value: s, label: `Môn ${s}` }))}
+                style={{ minWidth: 135 }}
+              />
+            )}
             <Tooltip title="Tải dữ liệu mới nhất">
               <Button
                 type="text"
@@ -395,7 +397,7 @@ export default function WorkspaceDashboard() {
                   : view === "assessments"
                     ? "Theo dõi học lực đầu vào, tiến bộ và tương tác theo môn học."
                     : view === "grades"
-                      ? "Bảng điểm theo học kỳ, chụp phiếu trả lời và duyệt kết quả chấm."
+                      ? "Chọn lớp, môn và bài thi; kết nối điện thoại để chụp và tự lưu điểm."
                       : view === "talents"
                         ? "Gắn thẻ năng khiếu và ghi nhận hướng bồi dưỡng cho từng học sinh."
                         : view === "reports"
@@ -477,7 +479,7 @@ export default function WorkspaceDashboard() {
             <Skeleton active paragraph={{ rows: 8 }} />
           ) : (
             <>
-              {view !== "settings" && (
+              {view !== "settings" && view !== "grades" && (
                 <div className="scope-row no-print">
                   <Space wrap>
                     <Select

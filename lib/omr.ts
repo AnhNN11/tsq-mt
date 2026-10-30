@@ -164,18 +164,22 @@ function markerCenters(image: GrayImage) {
     .slice(0, 30)
     .map(({ x, y }) => ({ x, y }));
 }
-function alignmentQuality(image: GrayImage, corners: Point[]) {
+function alignmentQuality(
+  image: GrayImage,
+  corners: Point[],
+  groups: BubbleGroup[],
+) {
   try {
     const h = homography(UNIT_CORNERS, corners);
-    const samples = SHEET_LAYOUT.filter((_, i) => i % 2 === 0).map((g) =>
-      bubble(image, h, g.points[0], g.rx, g.ry, false),
-    );
+    const samples = groups
+      .filter((_, i) => i % 2 === 0)
+      .map((g) => bubble(image, h, g.points[0], g.rx, g.ry, false));
     return samples.filter((s) => s.ring > 0.18).length / samples.length;
   } catch {
     return 0;
   }
 }
-function detectCorners(image: GrayImage) {
+function detectCorners(image: GrayImage, groups: BubbleGroup[]) {
   const centers = markerCenters(image),
     hull = convexHull(centers);
   if (hull.length < 4)
@@ -197,12 +201,12 @@ function detectCorners(image: GrayImage) {
   for (const { points } of candidates.slice(0, 12))
     for (let rotation = 0; rotation < 4; rotation++) {
       const corners = [...points.slice(rotation), ...points.slice(0, rotation)];
-      const quality = alignmentQuality(image, corners);
+      const quality = alignmentQuality(image, corners, groups);
       if (quality > best.quality) best = { quality, corners };
     }
   if (best.quality < 0.48)
     throw new Error(
-      "Không khớp mẫu phiếu 40 câu chọn đáp án, 8 câu đúng/sai, 6 câu trả lời ngắn. Căn chỉnh lại dấu góc hoặc chụp rõ hơn.",
+      "Không khớp mẫu phiếu đang chọn. Căn chỉnh lại dấu góc hoặc chụp rõ hơn.",
     );
   return best.corners;
 }
@@ -231,6 +235,7 @@ export async function recognizePaper(
   input: Buffer,
   scoring: ExamScoring,
   manualCorners?: Point[],
+  groups: BubbleGroup[] = SHEET_LAYOUT,
 ): Promise<Recognition> {
   const raw = await sharp(input, { limitInputPixels: 24_000_000 })
     .autoOrient()
@@ -254,10 +259,11 @@ export async function recognizePaper(
         x: p.x * image.width,
         y: p.y * image.height,
       }))
-    : detectCorners(image);
+    : detectCorners(image, groups);
   if (
     manualCorners &&
-    (!validCorners(manualCorners) || alignmentQuality(image, corners) < 0.35)
+    (!validCorners(manualCorners) ||
+      alignmentQuality(image, corners, groups) < 0.35)
   )
     throw new Error(
       "Bốn góc chưa khớp phiếu. Chọn tâm bốn dấu vuông ngoài cùng theo thứ tự trên trái, trên phải, dưới phải, dưới trái của phiếu.",
@@ -272,7 +278,7 @@ export async function recognizePaper(
     >();
   let confidence = 0,
     filled = 0;
-  for (const group of SHEET_LAYOUT) {
+  for (const group of groups) {
     const values = group.points.map((p) =>
       Number(bubble(image, h, p, group.rx, group.ry).fill.toFixed(3)),
     );
@@ -289,7 +295,10 @@ export async function recognizePaper(
     marks.push({ key: group.key, values, uncertain: chosen.uncertain });
   }
   answers.multipleChoice = answers.multipleChoice.map((_, i) => {
-    const selected = read.get(`multipleChoice:${i}`)!;
+    const selected = read.get(`multipleChoice:${i}`) ?? {
+      value: "",
+      uncertain: true,
+    };
     if (!selected.value)
       warnings.push(
         `Phần chọn đáp án, câu ${i + 1}: ${selected.uncertain ? "tô mờ hoặc nhiều ô" : "chưa thấy ô được tô"}.`,
@@ -298,7 +307,10 @@ export async function recognizePaper(
   });
   answers.trueFalse = answers.trueFalse.map((row, i) =>
     row.map((_, j) => {
-      const selected = read.get(`trueFalse:${i}:${j}`)!;
+      const selected = read.get(`trueFalse:${i}:${j}`) ?? {
+        value: "",
+        uncertain: true,
+      };
       if (!selected.value)
         warnings.push(
           `Phần đúng/sai, câu ${i + 1}, ý ${"abcd"[j]}: ${selected.uncertain ? "tô mờ hoặc nhiều ô" : "chưa thấy ô được tô"}.`,
@@ -307,8 +319,10 @@ export async function recognizePaper(
     }),
   );
   answers.shortAnswer = answers.shortAnswer.map((_, i) => {
-    const cells = Array.from({ length: 4 }, (_, col) =>
-      read.get(`shortAnswer:${i}:${col}`)!,
+    const cells = Array.from(
+      { length: 4 },
+      (_, col) =>
+        read.get(`shortAnswer:${i}:${col}`) ?? { value: "", uncertain: true },
     );
     const value = cells
       .map((c) => c.value || " ")
@@ -326,7 +340,10 @@ export async function recognizePaper(
     return invalid ? "" : value;
   });
   const code = (prefix: string, length: number) => {
-    const cells = Array.from({ length }, (_, i) => read.get(`${prefix}:${i}`)!);
+    const cells = Array.from(
+      { length },
+      (_, i) => read.get(`${prefix}:${i}`) ?? { value: "" },
+    );
     return cells.every((c) => c.value)
       ? cells.map((c) => c.value).join("")
       : "";

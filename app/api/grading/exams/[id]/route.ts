@@ -1,3 +1,4 @@
+import { examTemplate } from "@/lib/exam-template-server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import {
   gradeUser,
@@ -56,9 +57,11 @@ export async function PUT(request: Request, ctx: Context) {
     const { id } = await ctx.params;
     const old = await gradeExam(id, user, true);
     const body = await gradingBody(request);
+    if (!Number.isSafeInteger(body.version) || body.version < 1)
+      throw new GradingError("Phiên bản bài thi chưa hợp lệ. Tải lại trước khi lưu.");
     let exam;
     try {
-      exam = checkedExam(body);
+      exam = checkedExam({ ...body, semester: old.semester, kind: "regular" });
     } catch (e) {
       throw new GradingError((e as Error).message);
     }
@@ -66,6 +69,13 @@ export async function PUT(request: Request, ctx: Context) {
       throw new GradingError(
         "Lớp và môn được giữ nguyên theo danh sách dự thi. Tạo bài kiểm tra mới nếu cần đổi lớp hoặc môn.",
       );
+    const template = await examTemplate(
+      body.template_id,
+      body.template_version,
+      exam.subject,
+      exam.scoring,
+      old,
+    );
     const { data } = await readWorkspace();
     const cls = data.classes.find((c) => c.id === exam.class_id);
     if (!cls) throw new GradingError("Lớp học không còn trong hệ thống.");
@@ -73,7 +83,7 @@ export async function PUT(request: Request, ctx: Context) {
       "school_save_exam",
       {
         p_actor: user.username,
-        p_exam: { ...exam, id: old.id, class_name: cls.name },
+        p_exam: { ...exam, ...template, id: old.id, class_name: cls.name },
         p_version: body.version,
         p_roster: [],
       },
@@ -118,6 +128,24 @@ export async function PATCH(request: Request, ctx: Context) {
         .eq("exam_id", id);
       databaseError(closed.error);
     }
+    return { ok: true };
+  });
+}
+
+export async function DELETE(request: Request, ctx: Context) {
+  return gradingRoute(async () => {
+    const user = await gradeUser(request);
+    const { id } = await ctx.params;
+    await gradeExam(id, user);
+    const body = await gradingBody(request);
+    if (!Number.isSafeInteger(body.version))
+      throw new GradingError("Phiên bản bài thi chưa hợp lệ.");
+    const r = await createAdminClient().rpc("school_delete_empty_exam", {
+      p_actor: user.username,
+      p_exam: id,
+      p_version: body.version,
+    });
+    databaseError(r.error);
     return { ok: true };
   });
 }

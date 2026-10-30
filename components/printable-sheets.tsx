@@ -7,10 +7,12 @@ export default function PrintableSheets({
   subject,
   variant,
   candidates,
+  groups,
 }: {
   title: string;
   subject: string;
   variant: string;
+  groups?: import("@/lib/omr-reference").BubbleGroup[];
   candidates: { student_name: string; candidate_number: string }[];
 }) {
   return (
@@ -39,6 +41,7 @@ export default function PrintableSheets({
           dangerouslySetInnerHTML={{
             __html: sheetSvg({
               title,
+              groups,
               subject,
               studentName: candidate.student_name,
               candidateNumber: candidate.candidate_number,

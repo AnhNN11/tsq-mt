@@ -17,7 +17,6 @@ import {
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   DEFAULT_SCORING,
-  EXAM_KINDS,
   checkedExam,
   emptyAnswers,
   maxExamScore,
@@ -26,6 +25,7 @@ import {
   type Exam,
   type ExamScoring,
 } from "@/lib/grading-model";
+import type { PaperTemplate } from "@/lib/paper-template-model";
 import type { SchoolClass } from "@/lib/model";
 import { gradingFetch } from "@/lib/grading-client";
 import AnswerEditor from "./answer-editor";
@@ -39,6 +39,7 @@ export default function ExamEditor({
   semester,
   classId,
   locked,
+  templates = [],
   onClose,
   onSaved,
 }: {
@@ -49,16 +50,25 @@ export default function ExamEditor({
   semester: number;
   classId?: string;
   locked: boolean;
+  templates?: PaperTemplate[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [form] = Form.useForm();
   const { message, modal } = App.useApp();
   const [scoring, setScoring] = useState<ExamScoring>(
-    exam?.scoring ?? { ...DEFAULT_SCORING },
+    exam?.scoring ??
+      (subject === "Tiếng Anh"
+        ? {
+            ...DEFAULT_SCORING,
+            multipleChoicePoints: 0.25,
+            trueFalseCount: 0,
+            shortAnswerCount: 0,
+          }
+        : { ...DEFAULT_SCORING }),
   );
   const [keys, setKeys] = useState<AnswerKey[]>(
-    exam?.answer_keys ?? [{ code: "0001", answers: emptyAnswers() }],
+    exam?.answer_keys ?? [{ code: "0001", answers: emptyAnswers(scoring) }],
   );
   const [active, setActive] = useState("0"),
     [busy, setBusy] = useState(false),
@@ -103,11 +113,25 @@ export default function ExamEditor({
   async function save(values: object) {
     setBusy(true);
     try {
-      const data = checkedExam({ ...values, scoring, answer_keys: keys });
+      const data = checkedExam({
+        semester: 1,
+        kind: "regular",
+        ...values,
+        scoring,
+        answer_keys: keys,
+      });
+      const template_id = form.getFieldValue("template_id");
+      const template = templates.find((t) => t.id === template_id);
+      if (!template_id) throw new Error("Chọn mẫu phiếu cho bài thi.");
       await gradingFetch(
         exam ? `/api/grading/exams/${exam.id}` : "/api/grading/exams",
         exam ? "PUT" : "POST",
-        { ...data, version: exam?.version ?? 0 },
+        {
+          ...data,
+          template_id,
+          template_version: template?.version,
+          version: exam?.version ?? 0,
+        },
       );
       message.success("Đã lưu bài kiểm tra và đáp án.");
       onSaved();
@@ -150,6 +174,8 @@ export default function ExamEditor({
     };
     try {
       checkedExam({
+        semester: 1,
+        kind: "regular",
         ...form.getFieldsValue(true),
         scoring,
         answer_keys: [key],
@@ -184,16 +210,19 @@ export default function ExamEditor({
         form={form}
         layout="vertical"
         initialValues={
-          exam ?? {
-            title: "",
-            school_year: year,
-            semester,
-            class_id: classId ?? classes[0]?.id,
-            subject,
-            kind: "regular",
-            weight: 1,
-            exam_date: today(),
-          }
+          exam
+            ? { ...exam, template_id: exam.template_id ?? templates[0]?.id }
+            : {
+                template_id: templates[0]?.id,
+                title: "",
+                school_year: year,
+                semester,
+                class_id: classId ?? classes[0]?.id,
+                subject,
+                kind: "regular",
+                weight: 1,
+                exam_date: today(),
+              }
         }
         onFinish={save}
       >
@@ -243,6 +272,34 @@ export default function ExamEditor({
                       </Form.Item>
                     </Col>
                   </Row>
+                  <Form.Item
+                    name="template_id"
+                    label="Mẫu phiếu ô tô"
+                    rules={[{ required: true, message: "Chọn mẫu phiếu." }]}
+                    extra="Vị trí ô tô của mẫu được giữ riêng trong bài thi; sửa danh mục mẫu không thay đổi bài đã tạo."
+                  >
+                    <Select
+                      aria-label="Mẫu phiếu ô tô"
+                      disabled={locked}
+                      options={[
+                        ...(exam?.template_id &&
+                        !templates.some((t) => t.id === exam.template_id)
+                          ? [
+                              {
+                                value: exam.template_id,
+                                label:
+                                  exam.template_name ||
+                                  "Mẫu đã lưu theo bài thi",
+                              },
+                            ]
+                          : []),
+                        ...templates.map((t) => ({
+                          value: t.id,
+                          label: t.name,
+                        })),
+                      ]}
+                    />
+                  </Form.Item>
                   <Row gutter={16}>
                     <Col xs={12} md={6}>
                       <Form.Item
@@ -251,21 +308,6 @@ export default function ExamEditor({
                         rules={[{ required: true }]}
                       >
                         <Input disabled={locked} maxLength={20} />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={12} md={6}>
-                      <Form.Item
-                        name="semester"
-                        label="Học kỳ"
-                        rules={[{ required: true }]}
-                      >
-                        <Select
-                          disabled={locked}
-                          options={[
-                            { value: 1, label: "Học kỳ một" },
-                            { value: 2, label: "Học kỳ hai" },
-                          ]}
-                        />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={12}>
@@ -279,19 +321,6 @@ export default function ExamEditor({
                     </Col>
                   </Row>
                   <Row gutter={16}>
-                    <Col xs={24} md={10}>
-                      <Form.Item
-                        name="kind"
-                        label="Loại điểm"
-                        rules={[{ required: true }]}
-                      >
-                        <Select
-                          options={Object.entries(EXAM_KINDS).map(
-                            ([value, label]) => ({ value, label }),
-                          )}
-                        />
-                      </Form.Item>
-                    </Col>
                     <Col xs={12} md={6}>
                       <Form.Item
                         name="weight"
@@ -333,7 +362,7 @@ export default function ExamEditor({
                     <Alert
                       type="warning"
                       showIcon
-                      title="Đã có lịch sử điểm: đáp án, thang điểm, lớp và học kỳ được khóa. Tạo bài kiểm tra mới nếu cần thay đổi."
+                      title="Đã có lịch sử điểm: đáp án, thang điểm và mẫu phiếu được khóa. Tạo bài kiểm tra mới nếu cần thay đổi."
                     />
                   )}
                   <div className="exam-scoring-grid">
